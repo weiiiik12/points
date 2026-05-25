@@ -3,35 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的點數經濟系統</title>
+    <title>全學科點數獎勵經濟系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* 基礎快速排版，確保切換流暢 (稍後可移至 style.css) */
+        .tab-section { display: none; max-width: 600px; margin: 20px auto; padding: 15px; font-family: sans-serif; }
+        .tab-section.active { display: block; }
+        .nav-bar { display: flex; background: #333; overflow-x: auto; padding: 5px; sticky: top; }
+        .nav-btn { flex: 1; padding: 12px; background: none; border: none; color: #fff; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .nav-btn.active { background: #6c5ce7; border-radius: 5px; }
+        .card { background: #f8f9fa; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    </style>
 </head>
 <body>
 
-    <div style="text-align: center; margin-top: 30px; font-family: sans-serif;">
-        <h2>目前持有總點數</h2>
-        <div id="points-display" style="font-size: 4rem; font-weight: bold; color: #ff7675;">--</div>
-        <p>目前登入學生：<span id="user-name-display" style="font-weight: bold;">讀取中...</span></p>
+    <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 9999; display: flex; justify-content: center; align-items: center; font-family: sans-serif;">
+        <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 85%; max-width: 350px; text-align: center;">
+            <h2 style="color: #6c5ce7; margin-top: 0;">📝 學生多功能金庫</h2>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">請登入以同步學習資料</p>
+            <input type="email" id="email-input" placeholder="電子信箱 (Email)" style="width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+            <input type="password" id="password-input" placeholder="密碼 (至少6位數)" style="width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="btn-login" style="flex: 1; background: #6c5ce7; color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold;">登入</button>
+                <button id="btn-register" style="flex: 1; background: #00b894; color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold;">註冊</button>
+            </div>
+            <p id="login-error-msg" style="color: #d63031; font-size: 0.85rem; margin-top: 15px; min-height: 1.2em;"></p>
+        </div>
     </div>
 
-    <div style="max-width: 400px; margin: 30px auto; padding: 20px; background: #f8f9fa; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; font-family: sans-serif;">
-        <div id="weekend-badge" style="display: none; background: #fdcb6e; color: #d35400; padding: 5px; border-radius: 5px; font-weight: bold; margin-bottom: 15px; animation: pulse 1.5s infinite;">
-            🔥 週末特別挑戰：點數加倍發放中！
+    <div id="main-app" style="display: none;">
+        
+        <div style="background: #2d3436; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; font-family: sans-serif; font-size: 0.9rem;">
+            <span>學生: <strong id="user-email-display">---</strong></span>
+            <span>💰 點數: <strong id="points-display" style="color: #ffeaa7; font-size: 1.2rem;">0</strong> 點</span>
+            <button id="btn-logout" style="background: #d63031; border: none; color: white; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">登出</button>
         </div>
 
-        <h3 style="color: #2d3436; margin-top: 0;">🔤 每日英文單字挑戰</h3>
-        
-        <div id="question-box" style="font-size: 1.8rem; font-weight: bold; color: #0984e3; margin: 20px 0;">
-            讀取中...
+        <div class="nav-bar">
+            <button class="nav-btn active" onclick="switchTab('tab-challenge')">🎯 挑戰</button>
+            <button class="nav-btn" onclick="switchTab('tab-shop')">🎁 商店背包</button>
+            <button class="nav-btn" onclick="switchTab('tab-bank')">🏦 金庫投資</button>
+            <button class="nav-btn" onclick="switchTab('tab-social')">💬 廣場交友</button>
+            <button class="nav-btn" onclick="switchTab('tab-market')">🏙️ 易物市集</button>
+            <button class="nav-btn" onclick="switchTab('tab-achieve')">🏆 成就徽章</button>
+            <button class="nav-btn" style="color: #ffeaa7;" onclick="switchTab('tab-teacher')">⚙️ 教師後台</button>
         </div>
 
-        <input type="text" id="answer-input" placeholder="請輸入英文單字..." style="width: 80%; padding: 12px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 8px; text-align: center; outline: none;">
-        
-        <button id="btn-submit-answer" style="width: 85%; margin-top: 15px; padding: 12px; font-size: 1.1rem; background: #6c5ce7; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-            送出答案
-        </button>
+        <div id="tab-challenge" class="tab-section active">
+            <div id="weekend-badge" style="display: none; background: #fdcb6e; color: #d35400; padding: 8px; border-radius: 8px; font-weight: bold; text-align: center; margin-bottom: 15px;">
+                🔥 週末特別挑戰：答題點數翻倍，並解鎖「週末限定題庫」！
+            </div>
+            
+            <div class="card">
+                <h3>✍️ 全科常態與週末挑戰</h3>
+                <p style="color: #7f8c8d; font-size: 0.9rem;">(未來串接多學科龐大題庫系統架構位置)</p>
+                <button onclick="simulateAddPoints(10, '常態答題')" style="background: #0984e3; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">模擬答對常態題</button>
+            </div>
 
-        <div id="result-msg" style="margin-top: 15px; font-weight: bold; min-height: 1.5em;"></div>
+            <div class="card">
+                <h3>👥 好友共答 (2~8人組隊挑戰房間)</h3>
+                <input type="text" id="team-room-id" placeholder="輸入房間號碼或隊伍ID" style="padding: 8px; width: 60%;">
+                <button onclick="joinTeamChallenge()" style="background: #6c5ce7; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">加入/建立組隊</button>
+                <div id="team-status" style="margin-top:10px; font-size:0.9rem; color:#555;"></div>
+            </div>
+
+            <div class="card">
+                <h3>🎫 序號兌換碼</h3>
+                <input type="text" id="redeem-code-input" placeholder="請輸入兌換碼 (序號)" style="padding: 8px; width: 60%; text-transform: uppercase;">
+                <button id="btn-redeem-code" style="background: #00b894; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">兌換</button>
+            </div>
+        </div>
+
+        <div id="tab-shop" class="tab-section">
+            <div class="card">
+                <h3>🎰 盲盒抽獎區</h3>
+                <button onclick="simulateGacha()" style="background: linear-gradient(135deg, #74b9ff, #0984e3); color:white; border:none; padding:12px; width:100%; border-radius:8px; font-weight:bold; cursor:pointer;">啟動盲盒轉盤 (-100點)</button>
+            </div>
+            <div class="card">
+                <h3>🎁 禮物商品櫥窗 (商店直購)</h3>
+                <p style="color: #7f8c8d; font-size: 0.9rem;">(商品上架直購架構預留區)</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; text-align: center;">
+                        <h4>作業減少券</h4>
+                        <p style="color: #e17055; font-weight: bold;">200 點</p>
+                        <button onclick="buyProductDirect('作業減少券', 200)" style="background:#00b894; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">直接兌換</button>
+                    </div>
+                    <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; text-align: center;">
+                        <h4>自選座位券</h4>
+                        <p style="color: #e17055; font-weight: bold;">500 點</p>
+                        <button onclick="buyProductDirect('自選座位券', 500)" style="background:#00b894; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">直接兌換</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card" style="background: #fff3cd;">
+                <h3>🎒 我的背包物品</h3>
+                <div id="bag-list-display" style="font-size: 0.95rem; color: #333;">讀取中...</div>
+            </div>
+        </div>
+
+        <div id="tab-bank" class="tab-section">
+            <div class="card" style="background: linear-gradient(135deg, #00b09b, #96c93d); color: white;">
+                <h3>🏦 英文金庫基金 (活存/定存)</h3>
+                <p>活存日利率：2% (每晚 20:00 複利結算)</p>
+                <p>定存超高回饋：鎖定 30 天，每日享複利 6%！</p>
+            </div>
+            <div class="card">
+                <h4>🔒 申請定期存款</h4>
+                <input type="number" id="deposit-amount" placeholder="輸入定存本金" style="padding:8px; width:50px;">
+                <button onclick="createDeposit()" style="background:#00b894; color:white; border:none; padding:8px; border-radius:5px; cursor:pointer;">確認定存鎖定</button>
+                <div id="deposit-list" style="margin-top: 10px; font-size: 0.9rem; color:#666;"></div>
+            </div>
+        </div>
+
+        <div id="tab-social" class="tab-section">
+            <div class="card">
+                <h3>💬 同班/同群組 交誼廣場</h3>
+                <p style="color:#7f8c8d; font-size:0.9rem;">配戴妳的特殊成就徽章，跟同學們互相激勵打氣吧！</p>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="post-input" placeholder="分享妳今天挑戰單字的心情..." style="flex:1; padding:10px; border-radius:20px; border:1px solid #ccc;">
+                    <button onclick="submitPost()" style="background:#6c5ce7; color:white; border:none; padding:0 15px; border-radius:20px; cursor:pointer;">發送</button>
+                </div>
+                <div id="post-list-display" style="margin-top:15px;"></div>
+            </div>
+        </div>
+
+        <div id="tab-market" class="tab-section">
+            <div class="card" style="background: #e1f5fe; border-left: 5px solid #0288d1;">
+                <h3>🏙️ 物品易物市集 (⚠️ 禁止點數買賣)</h3>
+                <p style="margin:0; font-size:0.9rem; color:#0288d1;">這裡不使用點數！只能拿妳背包裡現有的卡片，向同學發起「交換請求」喔！</p>
+            </div>
+            <div class="card">
+                <h4>發起交換請求</h4>
+                <input type="text" id="my-trade-item" placeholder="我拿出什麼券 (例如：作業減少券)" style="width:80%; padding:8px; margin-bottom:5px;"><br>
+                <input type="text" id="target-trade-item" placeholder="我想換回什麼券 (例如：換座位券)" style="width:80%; padding:8px; margin-bottom:10px;"><br>
+                <button onclick="createTradeRequest()" style="background:#0984e3; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">發佈到易物市集</button>
+            </div>
+            <div id="market-list-display"></div>
+        </div>
+
+        <div id="tab-achieve" class="tab-section">
+            <div class="card">
+                <h3>🏆 我的英文與學科成就勳章</h3>
+                <div id="achieve-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; text-align:center;">
+                    <div id="ach-first" style="border:1px solid #ddd; padding:10px; opacity:0.3;">🐣 初學乍練<br><small>第一次答對 10 題</small></div>
+                    <div id="ach-king" style="border:1px solid #ddd; padding:10px; opacity:0.3;">🔥 百戰單字王<br><small>累計答對 100 題</small></div>
+                    <div id="ach-seven" style="border:1px solid #ddd; padding:10px; opacity:0.3;">📅 持之以恆<br><small>連續 7 天登入答題</small></div>
+                    <div id="ach-team" style="border:1px solid #ddd; padding:10px; opacity:0.3;">🏆 合作無間<br><small>完成 2~8 人組隊挑戰</small></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-teacher" class="tab-section">
+            <div class="card" style="border: 2px dashed #6c5ce7;">
+                <h3>⚙️ 教師專屬管理後台</h3>
+                <h4>🎫 生成活動兌換碼</h4>
+                <input type="text" id="new-promo-code" placeholder="自訂代碼 (例如 ENG888)" style="padding:8px;"><br><br>
+                <input type="number" id="new-promo-points" placeholder="賦予點數價值 (例如 100)" style="padding:8px;"><br><br>
+                <button onclick="generatePromoCodeCloud()" style="background:#6c5ce7; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">發佈序號至雲端</button>
+            </div>
+        </div>
+
     </div>
 
     <script type="module" src="js/main.js"></script>
