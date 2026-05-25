@@ -8,20 +8,30 @@
 </head>
 <body>
 
-    <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+    <div style="text-align: center; margin-top: 30px; font-family: sans-serif;">
         <h2>目前持有總點數</h2>
         <div id="points-display" style="font-size: 4rem; font-weight: bold; color: #ff7675;">--</div>
-        
         <p>目前登入學生：<span id="user-name-display" style="font-weight: bold;">讀取中...</span></p>
     </div>
 
-    <div style="text-align: center; margin-top: 30px;">
-        <button id="btn-add" style="padding: 10px 20px; font-size: 1rem; cursor: pointer; background: #00b894; color: white; border: none; border-radius: 5px; margin-right: 10px;">
-            ➕ 模擬答對單字 (+10點)
+    <div style="max-width: 400px; margin: 30px auto; padding: 20px; background: #f8f9fa; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; font-family: sans-serif;">
+        <div id="weekend-badge" style="display: none; background: #fdcb6e; color: #d35400; padding: 5px; border-radius: 5px; font-weight: bold; margin-bottom: 15px; animation: pulse 1.5s infinite;">
+            🔥 週末特別挑戰：點數加倍發放中！
+        </div>
+
+        <h3 style="color: #2d3436; margin-top: 0;">🔤 每日英文單字挑戰</h3>
+        
+        <div id="question-box" style="font-size: 1.8rem; font-weight: bold; color: #0984e3; margin: 20px 0;">
+            讀取中...
+        </div>
+
+        <input type="text" id="answer-input" placeholder="請輸入英文單字..." style="width: 80%; padding: 12px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 8px; text-align: center; outline: none;">
+        
+        <button id="btn-submit-answer" style="width: 85%; margin-top: 15px; padding: 12px; font-size: 1.1rem; background: #6c5ce7; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            送出答案
         </button>
-        <button id="btn-minus" style="padding: 10px 20px; font-size: 1rem; cursor: pointer; background: #d63031; color: white; border: none; border-radius: 5px;">
-            ➖ 模擬兌換禮物 (-20點)
-        </button>
+
+        <div id="result-msg" style="margin-top: 15px; font-weight: bold; min-height: 1.5em;"></div>
     </div>
 
     <script type="module" src="js/main.js"></script>
