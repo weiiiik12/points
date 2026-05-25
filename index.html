@@ -129,18 +129,33 @@
         </div>
 
         <div id="tab-market" class="tab-section">
-            <div class="card" style="background: #e1f5fe; border-left: 5px solid #0288d1;">
-                <h3>🏙️ 物品易物市集 (⚠️ 禁止點數買賣)</h3>
-                <p style="margin:0; font-size:0.9rem; color:#0288d1;">這裡不使用點數！只能拿妳背包裡現有的卡片，向同學發起「交換請求」喔！</p>
-            </div>
-            <div class="card">
-                <h4>發起交換請求</h4>
-                <input type="text" id="my-trade-item" placeholder="我拿出什麼券 (例如：作業減少券)" style="width:80%; padding:8px; margin-bottom:5px;"><br>
-                <input type="text" id="target-trade-item" placeholder="我想換回什麼券 (例如：換座位券)" style="width:80%; padding:8px; margin-bottom:10px;"><br>
-                <button onclick="createTradeRequest()" style="background:#0984e3; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">發佈到易物市集</button>
-            </div>
-            <div id="market-list-display"></div>
+    <div style="background: #e1f5fe; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed #2980b9; font-family: sans-serif;">
+        <h3 style="margin: 0 0 5px 0; color: #2980b9;">🏙️ 跳蚤易物市集</h3>
+        <p style="margin: 0; font-size: 0.9rem; color: #555; line-height: 1.5;">
+            不想要的禮物券可以掛在這裡跟其他人交換喔！<br>
+            <span style="color: #e74c3c; font-weight: bold;">⚠️ 注意：本市集禁止點數買賣，純粹以物易物。</span><br>
+            <span style="color: #00b894; font-size:0.8rem;">(💡 加好友後可以看到對方想交換的東西喔！)</span>
+        </p>
+    </div>
+
+    <div class="card">
+        <h4>📢 發佈我的交換心願</h4>
+        <div style="margin-bottom: 10px;">
+            <label style="font-size:0.85rem; color:#666; display:block; margin-bottom:3px;">我願意拿出背包裡的：</label>
+            <input type="text" id="my-trade-item" placeholder="例如：作業減少券" style="width: 90%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
         </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-size:0.85rem; color:#666; display:block; margin-bottom:3px;">我想換到同學的：</label>
+            <input type="text" id="target-trade-item" placeholder="例如：自選座位券" style="width: 90%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        <button onclick="createTradeRequestCloud()" style="background: #0984e3; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">發佈到易物市集</button>
+    </div>
+
+    <h4 style="color: #2d3436; margin-bottom: 10px;">🏪 目前市場上的交換需求</h4>
+    <div id="market-list-display">
+        <div style="text-align:center; color:#999; padding:20px;">正在讀取市集物品...</div>
+    </div>
+</div>
 
         <div id="tab-achieve" class="tab-section">
             <div class="card">
