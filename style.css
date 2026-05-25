@@ -1,0 +1,316 @@
+:root {
+    --bg-color: #f0f2f5;
+    --header-bg: #ffffff;
+    --text-color: #333333;
+    --primary: #4a90e2;
+    --success: #00b894;
+    --danger: #d63031;
+    --warning: #f1c40f;
+    
+    --common: #95a5a6; --uncommon: #00b894; --rare: #0984e3;
+    --epic: #6c5ce7; --legendary: #e17055; --mythic: #d63031;
+}
+
+/* 全域設定 */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-color); color: var(--text-color);
+    margin: 0; padding: 0;
+    user-select: none; -webkit-user-select: none;
+    overflow-x: hidden; padding-bottom: 20px;
+    transition: background 0.5s;
+}
+
+/* === 黃金光環特效 (歐皇降臨) === */
+body.golden-mode {
+    background: radial-gradient(circle, #fff7e6 0%, #ffeaa7 50%, #fdcb6e 100%);
+    animation: goldPulse 2s infinite alternate;
+}
+@keyframes goldPulse {
+    from { box-shadow: inset 0 0 20px #f1c40f; }
+    to { box-shadow: inset 0 0 50px #d35400; }
+}
+
+/* === 登入介面 === */
+#loginOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
+}
+.login-card {
+    background: white; padding: 30px; border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 85%; max-width: 350px;
+}
+.login-input {
+    width: 100%; padding: 12px; margin: 8px 0;
+    border: 1px solid #ccc; border-radius: 8px;
+    font-size: 1rem;
+}
+.btn-group-login { display: flex; gap: 10px; margin-top: 15px; }
+.btn-login { flex: 1; background: #4a90e2; color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-register { flex: 1; background: #00b894; color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-guest { background: #b2bec3; color: white; border: none; padding: 10px; font-size: 0.9rem; border-radius: 50px; cursor: pointer; margin-top: 20px; width: 100%; }
+.btn-forgot { background: none; border: none; color: #888; margin-top: 15px; font-size: 0.9rem; cursor: pointer; text-decoration: underline; }
+#loadingMsg { color: #888; margin-top: 10px; font-size: 0.9rem; display: none; }
+#loginError { color: red; font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; }
+
+.user-bar { background: #2d3436; color: white; padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding-top: max(8px, env(safe-area-inset-top)); }
+.btn-logout { background: #d63031; border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+
+/* === Header & Dropdown === */
+.header { background: var(--header-bg); padding: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
+.child-switcher-container { position: relative; display: inline-block; }
+.child-switcher { display: inline-block; background: #f1f2f6; padding: 5px 15px; border-radius: 20px; margin-bottom: 10px; font-weight: bold; color: #2d3436; cursor: pointer; border: 2px solid #dfe6e9; user-select: none; }
+.dropdown-menu { display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: white; min-width: 160px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 101; border-radius: 10px; overflow: hidden; margin-top: 5px; }
+.dropdown-menu div { color: black; padding: 12px 16px; text-decoration: none; display: block; cursor: pointer; border-bottom: 1px solid #f1f1f1; }
+.dropdown-menu div:hover { background-color: #f1f1f1; }
+.show { display: block; }
+
+.points-val { font-size: 3rem; font-weight: 800; color: #fab1a0; margin: 0; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.points-label { font-size: 0.9rem; color: #888; font-weight: bold; }
+
+.nav { display: flex; background: white; margin: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); padding: 5px; overflow-x: auto; }
+.nav-btn { flex: 1; padding: 10px; background: none; border: none; color: #888; font-weight: bold; cursor: pointer; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; white-space: nowrap; }
+.nav-btn.active { background: #dfe6e9; color: #2d3436; }
+.section { display: none; padding: 10px 20px; max-width: 600px; margin: 0 auto; animation: fadeIn 0.3s; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+.roulette-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+.roulette-box { background: #e9ecef; border-radius: 12px; padding: 20px 5px; text-align: center; font-weight: 800; font-size: 1.2rem; opacity: 0.6; color: #555; border: 3px solid transparent; border-bottom-width: 5px; display: flex; flex-direction: column; justify-content: center; min-height: 80px; transition: transform 0.1s; }
+.roulette-box span { font-size: 0.8rem; font-weight: normal; margin-top: 5px; opacity: 0.8; }
+.roulette-box.active { opacity: 1; transform: scale(1.05); background: #fff; box-shadow: 0 5px 20px rgba(0,0,0,0.15); z-index: 10; }
+
+.box-common { border-color: var(--common); } .box-common.active { color: var(--common); }
+.box-uncommon { border-color: var(--uncommon); } .box-uncommon.active { color: var(--uncommon); }
+.box-rare { border-color: var(--rare); } .box-rare.active { color: var(--rare); }
+.box-epic { border-color: var(--epic); } .box-epic.active { color: var(--epic); }
+.box-legendary { border-color: var(--legendary); } .box-legendary.active { color: var(--legendary); }
+.box-mythic { border-color: var(--mythic); } .box-mythic.active { color: var(--mythic); }
+
+.big-btn { width: 100%; padding: 18px; font-size: 1.4rem; font-weight: bold; border-radius: 50px; border: none; background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); color: white; box-shadow: 0 4px 10px rgba(9, 132, 227, 0.4); cursor: pointer; margin-top: 15px; transition: transform 0.1s; }
+.big-btn:active { transform: scale(0.98); }
+.big-btn:disabled { background: #b2bec3; box-shadow: none; cursor: not-allowed; }
+#finalResult { margin-top: 25px; padding: 20px; border-radius: 15px; text-align: center; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-height: 80px; display: flex; flex-direction: column; justify-content: center; }
+
+.list-item { background: white; border-left: 6px solid #ccc; margin-bottom: 10px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+.btn-use { background: #ff7675; color: white; border: none; padding: 6px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; margin-left: 5px; font-size: 0.9rem;}
+.btn-sell { background: #00cec9; color: white; border: none; padding: 6px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.9rem;}
+
+.pity-info { background: #fff8e1; color: #d35400; padding: 10px; border-radius: 10px; font-size: 0.85rem; margin-top: 20px; text-align: center; border: 1px solid #ffe0b2; }
+
+.bank-card { background: linear-gradient(135deg, #00b09b, #96c93d); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,176,155,0.3); }
+.bank-rate { font-size: 1.5rem; font-weight: bold; }
+.bank-desc { font-size: 0.9rem; opacity: 0.9; margin-bottom: 10px; }
+.bank-timer { font-family: monospace; font-size: 1.1rem; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; margin-top: 10px; display: inline-block; font-weight: bold;}
+.bank-formula { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 5px 10px; border-radius: 10px; margin-top: 15px; display: block; }
+.bank-est { font-size: 1rem; font-weight: bold; background: rgba(255,255,255,0.25); padding: 10px; border-radius: 10px; margin-top: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.3); }
+
+.deposit-form { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.deposit-input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 10px; font-size: 1.2rem; text-align: center; }
+.btn-deposit { width: 100%; padding: 12px; background: #00b894; color: white; border: none; border-radius: 10px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
+.deposit-item { background: white; border: 1px solid #eee; border-radius: 10px; padding: 15px; margin-bottom: 10px; position: relative; overflow: hidden; }
+.deposit-item::before { content: "🔒"; position: absolute; right: -10px; top: -10px; font-size: 3rem; opacity: 0.1; }
+.deposit-header { display: flex; justify-content: space-between; font-weight: bold; color: #2d3436; margin-bottom: 5px; }
+.deposit-time { font-size: 0.85rem; color: #636e72; }
+.btn-redeem { width: 100%; margin-top: 10px; padding: 8px; background: #fdcb6e; color: #d35400; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-redeem:disabled { background: #dfe6e9; color: #b2bec3; cursor: not-allowed; }
+
+.admin-box { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+.admin-input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; }
+.btn-admin { background: #0984e3; color: white; padding: 10px; width: 100%; border: none; border-radius: 5px; cursor: pointer; }
+.btn-settings { background: #636e72; color: white; padding: 12px; width: 100%; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.1rem; margin-top:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+.prize-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+.btn-mini-del { background: #ff7675; color: white; border: none; border-radius: 5px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem; margin-left: 5px;}
+.btn-mini-edit { background: #74b9ff; color: white; border: none; border-radius: 5px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem; }
+
+.btn-backup { background: #6c5ce7; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; width: 48%; }
+.btn-restore { background: #e17055; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; width: 48%; }
+
+.btn-external-game { display: inline-block; background-color: #636e72; color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.1s; }
+.btn-external-game:active { transform: scale(0.95); }
+
+/* Settings Modal */
+#settingsModal { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.8); z-index: 200; display: none; 
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch; 
+}
+.settings-content { 
+    background: #fff; margin: 20px auto; padding: 25px; 
+    width: 90%; max-width: 500px; border-radius: 15px; position: relative;
+    box-sizing: border-box; 
+}
+.settings-group { margin-bottom: 25px; border-bottom: 2px dashed #eee; padding-bottom: 20px; }
+.settings-group h4 { margin-top: 0; color: #2d3436; margin-bottom: 15px; border-left: 4px solid #4a90e2; padding-left: 10px; }
+.settings-label { font-size: 0.9rem; color: #666; margin-bottom: 5px; display: block; font-weight: bold; }
+.close-settings { position: absolute; top: 15px; right: 20px; font-size: 2rem; cursor: pointer; color: #999; line-height: 20px; }
+.radio-group { display: flex; gap: 15px; margin-bottom: 10px; }
+.radio-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+#prizeManagerList { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+/* PIN Modal */
+#pinModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 300; display: none; flex-direction: column; justify-content: center; align-items: center; }
+.pin-display { font-size: 2rem; letter-spacing: 10px; margin-bottom: 20px; font-weight: bold; min-height: 40px; }
+.pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.pin-btn { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #ddd; background: white; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: #333; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.pin-btn:active { background: #f0f0f0; transform: scale(0.95); }
+.btn-forgot-pin { margin-top: 30px; border: none; background: none; color: #999; text-decoration: underline; cursor: pointer; font-size: 0.9rem; }
+
+.child-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; margin-bottom: 5px; border-radius: 8px; }
+
+#confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+
+/* === 成就系統樣式 === */
+.badge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 15px;
+    padding: 10px;
+}
+.badge-item {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    opacity: 0.5; filter: grayscale(100%);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: help;
+}
+.badge-item.unlocked { opacity: 1; filter: grayscale(0%); cursor: pointer; transform: scale(1.05); }
+.badge-icon {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 32px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border: 3px solid #dfe6e9;
+    margin-bottom: 5px; position: relative;
+}
+.badge-item.unlocked .badge-icon {
+    background: linear-gradient(135deg, #fff 0%, #f1f2f6 100%);
+    border-color: #f1c40f;
+    box-shadow: 0 0 15px rgba(241, 196, 15, 0.6);
+    animation: shine 2s infinite alternate;
+}
+.badge-name { font-size: 0.8rem; font-weight: bold; color: #636e72; }
+.badge-item.unlocked .badge-name { color: #2d3436; }
+@keyframes shine { from { box-shadow: 0 0 5px rgba(241,196,15,0.5); } to { box-shadow: 0 0 20px rgba(241,196,15,0.9); } }
+.buff-tag { background: #e74c3c; color: white; font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+.progress-text { font-size: 0.7rem; color: #888; margin-top: 2px; }
+
+/* === 市集 (Market) 樣式 === */
+.market-item {
+    background: white; border: 1px solid #eee; border-radius: 10px; padding: 15px; margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative;
+    border-left: 5px solid #ccc;
+    display: flex; flex-direction: column; gap: 8px;
+}
+.market-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.market-title { font-weight: bold; font-size: 1.05rem; color: #333; margin-bottom: 2px;}
+.market-tag { font-size: 0.75rem; color: #fff; padding: 2px 8px; border-radius: 4px; font-weight: bold; display: inline-block;}
+.market-seller { font-size: 0.85rem; color: #888; display: flex; align-items: center; gap: 5px;}
+.market-price { font-size: 1.4rem; font-weight: 800; color: #e17055; text-align: right;}
+.market-price small { font-size: 0.8rem; font-weight: normal; color: #aaa; margin-left: 2px; }
+.market-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px; border-top: 1px dashed #eee; padding-top: 10px;}
+.btn-buy { background: #00b894; color: white; border: none; padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 1rem; box-shadow: 0 2px 5px rgba(0,184,148,0.3);}
+.btn-buy:disabled { background: #b2bec3; box-shadow: none; cursor: not-allowed; }
+.btn-cancel-sell { background: #ff7675; color: white; border: none; padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.9rem;}
+
+/* === 廣場 (Social) 樣式 === */
+.social-header {
+    background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: center;
+}
+.social-avatar {
+    width: 50px; height: 50px; border-radius: 50%; background: #dfe6e9;
+    display: flex; justify-content: center; align-items: center; font-size: 1.5rem;
+    border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.post-input-container { flex: 1; display: flex; gap: 5px; }
+.post-input {
+    width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 20px;
+    background: #f8f9fa; outline: none; transition: 0.3s;
+}
+.post-input:focus { background: white; border-color: #4a90e2; }
+.btn-post {
+    background: #4a90e2; color: white; border: none; padding: 0 20px;
+    border-radius: 20px; font-weight: bold; cursor: pointer; white-space: nowrap;
+}
+
+/* 貼文卡片 */
+.post-card {
+    background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative;
+    border-left: 4px solid transparent; transition: transform 0.1s;
+}
+.post-card:active { transform: scale(0.99); background: #fafafa; }
+.post-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.post-author { font-weight: bold; color: #2d3436; font-size: 0.95rem; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.post-author:hover { text-decoration: underline; color: #0984e3; }
+.post-badge { font-size: 0.8rem; background: #fff3cd; color: #d35400; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffeeba; }
+.post-time { font-size: 0.75rem; color: #b2bec3; }
+.post-content { color: #636e72; font-size: 1rem; line-height: 1.4; word-break: break-all; }
+.post-id { color: #b2bec3; font-size: 0.8rem; margin-left: 5px; font-weight: normal; }
+
+.post-actions { 
+    margin-top: 10px; 
+    border-top: 1px solid #f1f1f1; 
+    padding-top: 8px; 
+    display: flex; 
+    justify-content: flex-end; /* 預設靠右 */
+    align-items: center; 
+}
+
+.btn-add-friend { font-size: 0.8rem; color: #00b894; background: none; border: 1px solid #00b894; padding: 4px 10px; border-radius: 15px; cursor: pointer; }
+.btn-add-friend.disabled { color: #ccc; border-color: #ccc; cursor: default; }
+
+.btn-delete-post {
+    color: #e17055;
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-right: auto; /* 將刪除按鈕推到左邊，其他按鈕在右邊 */
+    opacity: 0.7;
+}
+.btn-delete-post:hover { opacity: 1; text-decoration: underline; }
+
+/* 好友邀請通知 */
+.friend-req-alert {
+    background: #ff7675; color: white; padding: 10px 15px; border-radius: 8px;
+    margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; animation: pulse 2s infinite; display: none; /* 預設隱藏 */
+}
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 118, 117, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 118, 117, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 118, 117, 0); } }
+
+/* 好友列表 */
+.friend-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; }
+.friend-chip {
+    background: white; 
+    border: 1px solid #74b9ff; 
+    padding: 6px 12px; 
+    border-radius: 20px;
+    font-size: 0.9rem; 
+    color: #0984e3; 
+    white-space: nowrap; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 5px;
+    margin-right: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.friend-chip span { font-weight: bold; color: #2d3436; }
+.friend-chip small { color: #b2bec3; font-size: 0.75rem; margin-left: 3px; }
+
+/* 徽章選擇 Modal */
+.badge-select-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; }
+.badge-option { font-size: 2rem; padding: 10px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; text-align: center; }
+.badge-option:hover { background: #f0f0f0; border-color: #ccc; }
+.badge-option.selected { border-color: #4a90e2; background: #e3f2fd; }

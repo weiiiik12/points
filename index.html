@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>超級幸運抽抽樂</title>
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="loginOverlay">
+    <div class="login-card">
+        <h2 style="margin-top:0; color:#4a90e2;">好孩子獎勵 App</h2>
+        <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">請登入或註冊以同步雲端資料</p>
+        <input type="email" id="emailInput" class="login-input" placeholder="電子信箱 (Email)">
+        <input type="password" id="passwordInput" class="login-input" placeholder="密碼 (至少6位數)">
+        <div class="btn-group-login">
+            <button id="btnLogin" class="btn-login">登入</button>
+            <button id="btnRegister" class="btn-register">註冊新帳號</button>
+        </div>
+        <button id="btnForgotPassword" class="btn-forgot">忘記密碼？</button>
+        <button id="btnGuest" class="btn-guest">👻 我是遊客 (免登入試玩)</button>
+        <div id="loadingMsg">資料讀取中...</div>
+        <p id="loginError"></p>
+    </div>
+</div>
+
+<div id="pinModal">
+    <h3 id="pinTitle" style="color:#2d3436;">請輸入家長密碼</h3>
+    <div id="pinDisplay" class="pin-display"></div>
+    <div class="pin-grid">
+        <div class="pin-btn" onclick="enterPin(1)">1</div>
+        <div class="pin-btn" onclick="enterPin(2)">2</div>
+        <div class="pin-btn" onclick="enterPin(3)">3</div>
+        <div class="pin-btn" onclick="enterPin(4)">4</div>
+        <div class="pin-btn" onclick="enterPin(5)">5</div>
+        <div class="pin-btn" onclick="enterPin(6)">6</div>
+        <div class="pin-btn" onclick="enterPin(7)">7</div>
+        <div class="pin-btn" onclick="enterPin(8)">8</div>
+        <div class="pin-btn" onclick="enterPin(9)">9</div>
+        <div class="pin-btn" style="background:#ff7675; color:white; font-size:1rem;" onclick="closePin()">取消</div>
+        <div class="pin-btn" onclick="enterPin(0)">0</div>
+        <div class="pin-btn" style="background:#dfe6e9; font-size:1rem;" onclick="clearPin()">←</div>
+    </div>
+    <button class="btn-forgot-pin" onclick="forgotPin()">忘記 PIN 碼？</button>
+</div>
+
+<div id="settingsModal">
+    <div class="settings-content">
+        <span class="close-settings" onclick="closeSettings()">×</span>
+        <h2 style="margin-top:0; color:#4a90e2;">⚙️ 詳細設定</h2>
+        
+        <div class="settings-group">
+            <h4>🏦 銀行參數 (基礎值)</h4>
+            <label class="settings-label">活存日利率 (例如 0.02 代表 2%)</label>
+            <input type="number" id="setDailyRate" class="admin-input" step="0.01">
+            <label class="settings-label">活存發放時間 (24小時制，0~23)</label>
+            <input type="number" id="setInterestHour" class="admin-input" placeholder="預設 20" min="0" max="23">
+            <label class="settings-label">定存日利率 (例如 0.06 代表 6%)</label>
+            <input type="number" id="setFixedRate" class="admin-input" step="0.01">
+            <label class="settings-label">定存鎖定天數 (天)</label>
+            <input type="number" id="setFixedDays" class="admin-input">
+        </div>
+
+        <div class="settings-group">
+            <h4>🎲 機率與保底 (基礎值)</h4>
+            <label class="settings-label" style="color:#e67e22;">💰 單次抽獎花費 (點數)</label>
+            <input type="number" id="setGachaCost" class="admin-input" placeholder="預設 100">
+            <hr style="margin: 15px 0; border:0; border-top:1px dashed #eee;">
+            <label class="settings-label" style="display:flex; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="setEnableBuffs" style="transform:scale(1.5); margin-right:10px;">
+                <span style="font-size:1rem; color:#2d3436;">啟用徽章特殊能力 (Buff)</span>
+            </label>
+            <p style="font-size:0.8rem; color:#666; margin-left:25px; margin-bottom:15px;">若關閉，徽章將僅作為展示，不再提供折扣或加成。</p>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div><small>普通(%)</small><input type="number" id="prob0" class="admin-input"></div>
+                <div><small>罕見(%)</small><input type="number" id="prob1" class="admin-input"></div>
+                <div><small>稀有(%)</small><input type="number" id="prob2" class="admin-input"></div>
+                <div><small>史詩(%)</small><input type="number" id="prob3" class="admin-input"></div>
+                <div><small>傳奇(%)</small><input type="number" id="prob4" class="admin-input"></div>
+                <div><small>神話(%)</small><input type="number" id="prob5" class="admin-input"></div>
+            </div>
+            <label class="settings-label">🛡️ 小保底觸發次數 (必中稀有+)</label>
+            <input type="number" id="setPityRare" class="admin-input" placeholder="預設 10">
+            <label class="settings-label">🛡️ 大保底觸發次數</label>
+            <input type="number" id="setPityLeg" class="admin-input" placeholder="預設 100">
+            <label class="settings-label">🛡️ 大保底獎勵目標</label>
+            <select id="setPityTarget" class="admin-input">
+                <option value="5">神話 (預設)</option>
+                <option value="4">傳奇以上 (傳奇或神話)</option>
+            </select>
+        </div>
+
+        <div class="settings-group">
+            <h4>🤝 社交與市集管理</h4>
+            <label class="settings-label" style="display:flex; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="setAllowFriendMarket" style="transform:scale(1.5); margin-right:10px;">
+                <span style="font-size:1rem; color:#2d3436;">允許查看好友的拍賣物品</span>
+            </label>
+            <p style="font-size:0.8rem; color:#666; margin-left:25px; margin-bottom:15px;">若關閉，小孩將只能看到「自己」和「家人」上架的物品，看不到外人賣的東西 (避免亂買)。</p>
+        </div>
+
+        <div class="settings-group">
+            <h4>🎁 獎品內容</h4>
+            <label class="settings-label">獎品庫模式：</label>
+            <div class="radio-group">
+                <label><input type="radio" name="prizeScope" value="global" onclick="switchPrizeScope('global')" checked> 全家共用 (預設)</label>
+                <label><input type="radio" name="prizeScope" value="individual" onclick="switchPrizeScope('individual')"> 個別小孩設定</label>
+            </div>
+            <p id="scopeHint" style="font-size:0.8rem; color:#666; background:#eee; padding:5px; border-radius:5px;">
+                目前模式：所有小孩共用同一套獎品清單。
+            </p>
+            <select id="tierSelect" class="admin-input" onchange="renderPrizeManager()" style="font-weight:bold; color:#333;">
+                <option value="0">普通</option>
+                <option value="1">罕見</option>
+                <option value="2">稀有</option>
+                <option value="3">史詩</option>
+                <option value="4">傳奇</option>
+                <option value="5">神話</option>
+            </select>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <input id="newPrizeName" class="admin-input" style="margin:0;" placeholder="輸入新獎品名稱">
+                <button class="btn-admin" style="width:80px; background:#00b894;" onclick="addCustomPrize()">新增</button>
+            </div>
+            <div id="prizeManagerList" style="max-height: 150px; overflow-y: auto; background:#f9f9f9; border:1px solid #eee; border-radius:5px;"></div>
+            <div style="text-align:right; margin-top:5px;">
+                 <button onclick="restoreDefaultPrizes()" style="font-size:0.8rem; color:#999; background:none; border:none; cursor:pointer; text-decoration:underline;">↺ 恢復預設</button>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <h4>👶 小孩管理</h4>
+            <div id="settingsChildList"></div>
+            <div style="margin-top:10px; display:flex; gap:5px;">
+                <input id="settingsNewChildName" class="admin-input" style="margin:0;" placeholder="輸入新名字">
+                <button class="btn-admin" style="width:80px;" onclick="addNewChildFromSettings()">新增</button>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <h4>🔐 安全與帳號</h4>
+            <label class="settings-label">家長密碼鎖 (PIN)</label>
+            <div style="display:flex; gap:5px;">
+                <button class="btn-admin" style="width:120px;" onclick="startSetPin()">設定/修改密碼</button>
+                <button class="btn-admin" style="width:120px; background:#b2bec3;" onclick="removePin()">清除密碼</button>
+            </div>
+            <p style="font-size:0.8rem; color:#888;">設定後，進入家長區需輸入密碼。</p>
+            <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+            <div id="guestBindSection" style="display:none; background:#fff3cd; padding:10px; border-radius:8px;">
+                <label class="settings-label" style="color:#d35400;">🔗 遊客資料轉正 (綁定 Email)</label>
+                <input type="email" id="bindEmail" class="admin-input" placeholder="Email">
+                <input type="password" id="bindPass" class="admin-input" placeholder="密碼">
+                <button class="btn-admin" onclick="bindGuestAccount()">綁定並上傳</button>
+            </div>
+            <div id="userAccountSection" style="display:none;">
+                <p>目前登入：<strong id="settingsEmailDisplay"></strong></p>
+                <button class="btn-admin" style="background:#636e72;" onclick="triggerResetPassword()">📧 發送重設密碼信</button>
+            </div>
+        </div>
+        
+        <div class="settings-group">
+            <h4>📬 關於與回饋</h4>
+            <p style="font-size:0.9rem; color:#666;">有任何問題或建議嗎？可以直接寫信給作者喔！</p>
+            <button class="btn-admin" style="background:#00cec9;" onclick="writeToAuthor()">✍️ 寫信給作者</button>
+        </div>
+
+        <button class="btn-admin" onclick="saveSettings()">💾 儲存所有設定並返回</button>
+    </div>
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div class="user-bar">
+    <span id="userEmail">未登入</span>
+    <div>
+        <button class="btn-logout" style="background:#f1c40f; color:#333; margin-right:5px; font-weight:bold;" onclick="openAchievements()">🏆 成就</button>
+        <button class="btn-logout" id="btnLogout">登出</button>
+    </div>
+</div>
+
+<div class="header">
+    <div class="child-switcher-container">
+        <div id="childSwitcher" class="child-switcher" onclick="toggleChildDropdown()">讀取中... ▼</div>
+        <div id="childDropdown" class="dropdown-menu"></div>
+    </div>
+    <div class="points-label">目前持有獎勵點數</div>
+    <div class="points-val" id="scoreDisplay">--</div>
+</div>
+
+<div class="nav">
+    <button class="nav-btn active" onclick="switchTab('tab-gacha')">🎰 抽獎</button>
+    <button class="nav-btn" onclick="switchTab('tab-bag')">🎒 背包</button>
+    <button class="nav-btn" onclick="switchTab('tab-social')">💬 廣場</button> <button class="nav-btn" onclick="switchTab('tab-market')">🏙️ 市集</button>
+    <button class="nav-btn" onclick="switchTab('tab-bank')">🏦 銀行</button>
+    <button class="nav-btn" onclick="switchTab('tab-admin')">⚙️ 家長</button>
+</div>
+
+<div id="tab-gacha" class="section active">
+    <div class="roulette-container">
+        <div id="box-0" class="roulette-box box-common">普通<span id="label-prob0">60%</span></div>
+        <div id="box-1" class="roulette-box box-uncommon">罕見<span id="label-prob1">20%</span></div>
+        <div id="box-2" class="roulette-box box-rare">稀有<span id="label-prob2">10%</span></div>
+        <div id="box-3" class="roulette-box box-epic">史詩<span id="label-prob3">6%</span></div>
+        <div id="box-4" class="roulette-box box-legendary">傳奇<span id="label-prob4">3%</span></div>
+        <div id="box-5" class="roulette-box box-mythic">神話<span id="label-prob5">1%</span></div>
+    </div>
+    <button id="btnDraw" class="big-btn" onclick="startGacha()">啟動轉盤 (-100點)</button>
+    <div class="pity-info">
+        🛡️ <strong>保底進度</strong><br>
+        小保底 (稀有+)：<span id="pityRareDisp" style="color:#0984e3; font-weight:bold;">0</span> / <span id="limitRare">10</span><br>
+        大保底 (<span id="limitTargetName">神話</span>)：<span id="pityLegDisp" style="color:#d63031; font-weight:bold;">0</span> / <span id="limitLeg">100</span>
+    </div>
+    <div id="finalResult"><span style="color:#aaa">準備抽獎...</span></div>
+</div>
+
+<div id="tab-bag" class="section">
+    <h3 style="border-left: 4px solid var(--rare); padding-left: 10px; color:#333;">🎒 我的獎品</h3>
+    <div id="bagList"></div>
+    <div id="bagEmpty" style="text-align:center; color:#999; padding:20px;">背包空空的</div>
+    <div style="text-align:center; margin-top: 30px; border-top: 1px dashed #ddd; padding-top: 20px;">
+        <a href="https://suenz001.github.io/history-card-game/" target="_blank" class="btn-external-game">🎮 作者測試中網頁遊戲</a>
+    </div>
+</div>
+
+<div id="tab-social" class="section">
+    <div id="friendReqAlert" class="friend-req-alert" onclick="showFriendRequests()">
+        <span>🔔 你有新的好友邀請！</span>
+        <button style="background:white; color:#ff7675; border:none; border-radius:10px; font-weight:bold; cursor:pointer; padding:3px 8px;">查看</button>
+    </div>
+
+    <div class="social-header">
+        <div id="mySocialBadge" class="social-avatar" onclick="selectSocialBadge()">😊</div>
+        <div class="post-input-container">
+            <input type="text" id="postInput" class="post-input" placeholder="分享你的心情...">
+            <button class="btn-post" onclick="submitPost()">發送</button>
+        </div>
+    </div>
+    
+    <div id="myFriendList" class="friend-list"></div>
+
+    <h4 style="margin: 10px 0; color:#636e72;">最新留言</h4>
+    <div id="postList">
+        <div style="text-align:center; color:#999; padding:20px;">載入中...</div>
+    </div>
+</div>
+
+<div id="tab-market" class="section">
+    <div style="background: #e1f5fe; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed #2980b9;">
+        <h3 style="margin: 0 0 5px 0; color: #2980b9;">🏙️ 跳蚤市集</h3>
+        <p style="margin: 0; font-size: 0.9rem; color: #555;">
+            不想要的卡片可以掛在這裡賣給其他人喔！<br>
+            <span style="color: #e74c3c; font-weight: bold;">⚠️ 注意：售出時銀行會收取 10% 手續費。</span><br>
+            <span style="color: #00b894; font-size:0.8rem;">(💡 加好友後可以看到對方賣的東西喔！)</span>
+        </p>
+    </div>
+    <div id="marketList"></div>
+    <div id="marketEmpty" style="text-align:center; color:#999; padding:20px;">目前沒有商品上架</div>
+</div>
+
+<div id="tab-bank" class="section">
+    <div class="bank-card">
+        <div class="bank-rate">📈 活存利率：<span id="dispDailyRate">2%</span> / 天</div>
+        <div class="bank-desc">每晚 <strong><span id="dispInterestHour">20</span>:00</strong> 結算，記得來領利息！</div>
+        <div class="bank-est">
+            💰 今日預估利息：<span id="estInterestVal" style="color:#ffeaa7; font-size:1.3rem;">0</span> 點
+            <div id="estInterestFormula" style="font-size:0.85rem; color:#dfe6e9; margin-top:5px;">(0 × 0.02 = 0)</div>
+        </div>
+        <div class="bank-formula">💡 活存採複利計算 (利滾利)</div>
+        <div style="font-size:0.8rem; background:rgba(255,255,255,0.2); padding:5px; border-radius:5px; margin-top:10px;">
+            上次領息：<span id="lastInterestDate">無</span>
+        </div>
+        <div style="text-align:center; margin-top:10px;">
+             <div style="font-size:0.8rem; margin-bottom:5px; color:#eee;">距離下次發利息還有：</div>
+             <div id="interestTimer" class="bank-timer">--:--:--</div>
+        </div>
+    </div>
+    <div class="deposit-form">
+        <h3 style="margin-top:0; color:#2d3436;">🔒 申請超級定存</h3>
+        <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">
+            鎖定 <strong><span id="dispFixedDays">30</span> 天</strong>，每天獲利 <strong><span id="dispFixedRate">6%</span></strong>！<br>
+            <span style="color:#d63031;">(超高報酬，但期間絕對不能領出)</span><br>
+            <span style="font-size:0.8rem; color:#888;">💡 利息 = 本金 × (1+利率)<sup>天數</sup> (複利爆發！)</span>
+        </p>
+        <input type="number" id="depositAmount" class="deposit-input" placeholder="輸入要存的點數">
+        <button class="btn-deposit" onclick="createDeposit()">確認存入</button>
+    </div>
+    <h3 style="margin:20px 0 10px 0;">我的定存單</h3>
+    <div id="depositList"></div>
+    <div id="depositEmpty" style="text-align:center; color:#999;">目前沒有定存</div>
+</div>
+
+<div id="tab-admin" class="section">
+    <div style="display:flex; gap:10px; margin-bottom:15px; padding-bottom:15px; border-bottom:1px dashed #ccc;">
+        <button class="btn-admin" style="background:#6c5ce7;" onclick="showAppGuide()">📖 使用指引</button>
+        <button class="btn-admin" style="background:#e84393;" onclick="showChangelog()">📣 改版內容</button>
+    </div>
+    
+    <div class="admin-box">
+        <h3>💰 發放/扣除 點數</h3>
+        <input type="text" id="reasonIn" class="admin-input" placeholder="原因 (例如：幫忙家事)">
+        <input type="number" id="pointsIn" class="admin-input" placeholder="點數">
+        <p style="font-size:0.8rem; color:#666; margin-top:5px; margin-bottom:10px;">(輸入負值如 -50 即可扣除點數)</p>
+        <button class="btn-admin" onclick="addPoints()">執行</button>
+    </div>
+    <button class="btn-settings" onclick="openSettings()">⚙️ 進入詳細設定 (密碼/機率/管理)</button>
+    <div class="admin-box" style="background:#f0f3ff; border:1px solid #dbe4ff; margin-top:20px;">
+        <h3 style="color:#4a69bd;">💾 資料備份 (本地端)</h3>
+        <div style="display:flex; justify-content:space-between;">
+            <button class="btn-backup" onclick="exportData()">⬇️ 匯出</button>
+            <button class="btn-restore" onclick="document.getElementById('importFile').click()">⬆️ 匯入</button>
+            <input type="file" id="importFile" style="display:none" onchange="importData(this)" accept=".json">
+        </div>
+    </div>
+    <div class="admin-box">
+        <h3>📜 存摺紀錄</h3>
+        <div id="historyList" style="font-size:0.9rem; color:#666;"></div>
+    </div>
+    <div style="text-align:center; margin-top:20px;">
+        <button onclick="resetAll()" style="background:#ddd; border:none; padding:10px 20px; border-radius:20px; color:#666;">⚠️ 重置資料 (清空雲端)</button>
+    </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+
+</body>
+</html>
