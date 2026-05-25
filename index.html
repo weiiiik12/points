@@ -19,18 +19,19 @@
 <body>
 
     <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 9999; display: flex; justify-content: center; align-items: center; font-family: sans-serif;">
-        <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 85%; max-width: 350px; text-align: center;">
-            <h2 style="color: #6c5ce7; margin-top: 0;">📝 學生多功能金庫</h2>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">請登入以同步學習資料</p>
-            <input type="email" id="email-input" placeholder="電子信箱 (Email)" style="width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
-            <input type="password" id="password-input" placeholder="密碼 (至少6位數)" style="width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button id="btn-login" style="flex: 1; background: #6c5ce7; color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold;">登入</button>
-                <button id="btn-register" style="flex: 1; background: #00b894; color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold;">註冊</button>
-            </div>
-            <p id="login-error-msg" style="color: #d63031; font-size: 0.85rem; margin-top: 15px; min-height: 1.2em;"></p>
+    <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 85%; max-width: 350px; text-align: center;">
+        <h2 style="color: #6c5ce7; margin-top: 0;">📝 學生多功能金庫</h2>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">請輸入老師給妳的學號與密碼</p>
+        
+        <input type="text" id="email-input" placeholder="學號/座號 (例如: 01)" style="width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+        <input type="password" id="password-input" placeholder="登入密碼" style="width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+        
+        <div style="margin-top: 15px;">
+            <button id="btn-login" style="width: 100%; background: #6c5ce7; color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: bold;">登入金庫</button>
         </div>
+        <p id="login-error-msg" style="color: #d63031; font-size: 0.85rem; margin-top: 15px; min-height: 1.2em;"></p>
     </div>
+</div>
 
     <div id="main-app" style="display: none;">
         
