@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的點數經濟系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div style="text-align: center; margin-top: 50px; font-family: sans-serif;">
+        <h2>目前持有總點數</h2>
+        <div id="points-display" style="font-size: 4rem; font-weight: bold; color: #ff7675;">--</div>
+        
+        <p>目前登入學生：<span id="user-name-display" style="font-weight: bold;">讀取中...</span></p>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <button id="btn-add" style="padding: 10px 20px; font-size: 1rem; cursor: pointer; background: #00b894; color: white; border: none; border-radius: 5px; margin-right: 10px;">
+            ➕ 模擬答對單字 (+10點)
+        </button>
+        <button id="btn-minus" style="padding: 10px 20px; font-size: 1rem; cursor: pointer; background: #d63031; color: white; border: none; border-radius: 5px;">
+            ➖ 模擬兌換禮物 (-20點)
+        </button>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
