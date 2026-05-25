@@ -1,21 +1,47 @@
 // js/main.js
+import { db } from './firebase-init.js'; // 💡 確保引進妳的 db 設定
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ----------------------------------------------------
-// 🔐 自訂學號登入系統 (取代原本的 Firebase Auth 郵件登入)
+// ⚙️ 全域變數宣告中心 (修復原版卡死問題)
+// ----------------------------------------------------
+let currentUserRef = null;
+let currentUserId = null;
+
+// ----------------------------------------------------
+// 🔐 自訂學號登入系統 (支援免重登快照、修復開門)
 // ----------------------------------------------------
 
 // 檢查瀏覽器在地快照，看看這台電腦上次是不是已經登入過了
 window.addEventListener('load', () => {
     const savedUserId = localStorage.getItem('currentStudentId');
-    if (savedUserId) {
-        logInSuccess(savedUserId, localStorage.getItem('currentStudentName'));
+    const savedUserName = localStorage.getItem('currentStudentName');
+    if (savedUserId && savedUserName) {
+        logInSuccess(savedUserId, savedUserName);
     }
+    // 啟動密碼小眼睛點擊功能
+    initPasswordToggle();
 });
+
+// 👁️ 密碼小眼睛顯示/隱藏切換功能
+function initPasswordToggle() {
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password-input'); // 對應妳 HTML 的密碼輸入框 id
+    
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+    }
+}
 
 // 處理學生的登入點擊
 document.getElementById('btn-login').addEventListener('click', async () => {
     const studentId = document.getElementById('email-input').value.trim(); // 拿學號
-    const inputPassword = document.getElementById('password-input').value.trim(); // 拿密碼
+    const passwordInput = document.getElementById('password-input');
+    const inputPassword = passwordInput ? passwordInput.value.trim() : ""; // 拿密碼
     const errorBox = document.getElementById('login-error-msg');
 
     if (!studentId || !inputPassword) {
@@ -36,12 +62,13 @@ document.getElementById('btn-login').addEventListener('click', async () => {
         // 核對密碼是否正確
         if (studentData.password === inputPassword) {
             errorBox.innerText = "";
+            
             // 將登入狀態存在學生的電腦裡（下次開網頁免重新登入）
             localStorage.setItem('currentStudentId', studentId);
-            localStorage.setItem('currentStudentName', studentData.name);
+            localStorage.setItem('currentStudentName', studentData.name || "新學生");
             
             // 執行登入成功流程
-            logInSuccess(studentId, studentData.name);
+            logInSuccess(studentId, studentData.name || "新學生");
         } else {
             errorBox.innerText = "❌ 密碼不對喔，再想一下！";
         }
@@ -51,7 +78,7 @@ document.getElementById('btn-login').addEventListener('click', async () => {
     }
 });
 
-// 登入成功的動作
+// 登入成功的動作 (完美對接所有雲端即時廣播)
 function logInSuccess(studentId, studentName) {
     currentUserId = studentId;
     currentUserRef = doc(db, "users", studentId);
@@ -60,7 +87,7 @@ function logInSuccess(studentId, studentName) {
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
 
-    // 啟動資料庫即時直播監聽
+    // 🔌 啟動所有模組的雲端直播監聽器
     startListeningData();
     startListeningMarket();
     checkWeekendStatus();
@@ -84,18 +111,20 @@ function startListeningData() {
             // 渲染背包顯示
             const bagList = userData.bag || [];
             const bagDisplay = document.getElementById('bag-list-display');
-            if(bagList.length === 0) {
-                bagDisplay.innerText = "背包空空的，快去兌換吧！";
-            } else {
-                bagDisplay.innerHTML = bagList.map(item => `🎒 <span style="background:#dfe6e9; padding:2px 8px; border-radius:15px; margin-right:5px; display:inline-block; margin-bottom:5px;">${item}</span>`).join('');
+            if(bagDisplay) {
+                if(bagList.length === 0) {
+                    bagDisplay.innerText = "背包空空的，快去兌換吧！";
+                } else {
+                    bagDisplay.innerHTML = bagList.map(item => `🎒 <span style="background:#dfe6e9; padding:2px 8px; border-radius:15px; margin-right:5px; display:inline-block; margin-bottom:5px;">${item}</span>`).join('');
+                }
             }
 
             // 渲染成就徽章亮起
             const achs = userData.achievements || [];
-            if(achs.includes('first_10')) document.getElementById('ach-first').style.opacity = "1";
-            if(achs.includes('king_100')) document.getElementById('ach-king').style.opacity = "1";
-            if(achs.includes('seven_days')) document.getElementById('ach-seven').style.opacity = "1";
-            if(achs.includes('team_success')) document.getElementById('ach-team').style.opacity = "1";
+            if(document.getElementById('ach-first') && achs.includes('first_10')) document.getElementById('ach-first').style.opacity = "1";
+            if(document.getElementById('ach-king') && achs.includes('king_100')) document.getElementById('ach-king').style.opacity = "1";
+            if(document.getElementById('ach-seven') && achs.includes('seven_days')) document.getElementById('ach-seven').style.opacity = "1";
+            if(document.getElementById('ach-team') && achs.includes('team_success')) document.getElementById('ach-team').style.opacity = "1";
         }
     });
 }
@@ -107,7 +136,7 @@ function checkWeekendStatus() {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0是週日，6是週六
     if (dayOfWeek === 0 || dayOfWeek === 6) {
-        document.getElementById('weekend-badge').style.display = 'block';
+        if(document.getElementById('weekend-badge')) document.getElementById('weekend-badge').style.display = 'block';
         return true;
     }
     return false;
@@ -165,7 +194,6 @@ document.getElementById('btn-redeem-code').addEventListener('click', async () =>
         // 通過驗證，開始發放點數
         const userSnap = await getDoc(currentUserRef);
         const currentPoints = userSnap.data().points || 0;
-        const currentBag = userSnap.data().bag || [];
 
         // 變更學生點數
         await updateDoc(currentUserRef, {
@@ -248,7 +276,6 @@ window.switchTab = function(tabId) {
     
     document.getElementById(tabId).classList.add('active');
     
-    // 讓點選的按鈕變色
     const buttons = document.querySelectorAll('.nav-btn');
     buttons.forEach(btn => {
         if(btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active');
@@ -256,34 +283,9 @@ window.switchTab = function(tabId) {
 };
 
 // ----------------------------------------------------
-// 系統核心：登入 / 註冊 / 登出事件監聽
-// ----------------------------------------------------
-document.getElementById('btn-login').addEventListener('click', () => {
-    const email = document.getElementById('email-input').value.trim();
-    const password = document.getElementById('password-input').value;
-    signInWithEmailAndPassword(auth, email, password).catch(() => {
-        document.getElementById('login-error-msg').innerText = "密碼錯誤或學生帳號不存在！";
-    });
-});
-document.getElementById('btn-register').addEventListener('click', () => {
-    const email = document.getElementById('email-input').value.trim();
-    const password = document.getElementById('password-input').value;
-    createUserWithEmailAndPassword(auth, email, password).catch(() => {
-        document.getElementById('login-error-msg').innerText = "註冊失敗，信箱格式錯誤或已被註冊！";
-    });
-});
-document.getElementById('btn-logout').addEventListener('click', () => { signOut(auth); });
-
-// 預留空架構函式，提供妳後續逐步開發
-window.joinTeamChallenge = function() { Swal.fire('2~8人組隊共答', '此核心架構功能開發中！', 'info'); };
-window.simulateGacha = function() { Swal.fire('盲盒抽獎模組', '此盲盒大機率保底機制開發中！', 'info'); };
-window.createDeposit = function() { Swal.fire('複利金庫投資', '此複利定存投資模組開發中！', 'info'); };
-window.submitPost = function() { Swal.fire('同班交誼廣場', '此留言與配戴徽章功能開發中！', 'info'); };
-// ----------------------------------------------------
-// 🏙️ 易物市集核心邏輯 (全新實體化)
+// 🏙️ 易物市集核心邏輯 
 // ----------------------------------------------------
 
-// 1. 發佈交換請求到雲端
 window.createTradeRequestCloud = async function() {
     const myItem = document.getElementById('my-trade-item').value.trim();
     const targetItem = document.getElementById('target-trade-item').value.trim();
@@ -293,7 +295,6 @@ window.createTradeRequestCloud = async function() {
     }
 
     try {
-        // 檢查學生的背包裡到底有沒有這項物品
         const userSnap = await getDoc(currentUserRef);
         const currentBag = userSnap.data().bag || [];
 
@@ -301,12 +302,10 @@ window.createTradeRequestCloud = async function() {
             return Swal.fire('物品不存在', `妳的背包裡沒有【${myItem}】，沒辦法拿出來交換喔！`, 'error');
         }
 
-        // 先把該物品從學生的背包「扣留/凍結」，避免他同時拿去跟別人換
         const itemIndex = currentBag.indexOf(myItem);
         currentBag.splice(itemIndex, 1);
         await updateDoc(currentUserRef, { bag: currentBag });
 
-        // 在雲端建立一個交易案件 (market_trades 集合)
         await addDoc(collection(db, "market_trades"), {
             sellerUid: currentUserId,
             sellerName: userSnap.data().name || "神祕同學",
@@ -325,10 +324,8 @@ window.createTradeRequestCloud = async function() {
     }
 };
 
-// 2. 直播監聽易物市集 (即時顯示所有人上架的物品)
 function startListeningMarket() {
     const marketRef = collection(db, "market_trades");
-    // 只抓目前還有效的交換案件
     const q = query(marketRef, where("status", "==", "active"));
 
     onSnapshot(q, async (snapshot) => {
@@ -341,8 +338,6 @@ function startListeningMarket() {
         }
 
         let html = "";
-        
-        // 讀取目前學生的背包，用來判斷他手上的東西夠不夠換
         const userSnap = await getDoc(currentUserRef);
         const myBag = userSnap.data().bag || [];
 
@@ -351,7 +346,6 @@ function startListeningMarket() {
             const tradeId = docSnap.id;
             
             const isMe = trade.sellerUid === currentUserId;
-            // 檢查我背包有沒有對方想要的物品
             const canTrade = myBag.includes(trade.wantItem);
 
             html += `
@@ -381,7 +375,6 @@ function startListeningMarket() {
     });
 }
 
-// 3. 處理「跟我換」的交換按鈕邏輯
 window.acceptTradeCloud = async function(tradeId) {
     try {
         const tradeRef = doc(db, "market_trades", tradeId);
@@ -392,8 +385,6 @@ window.acceptTradeCloud = async function(tradeId) {
         }
 
         const tradeData = tradeSnap.data();
-
-        // A. 檢查買家(目前登入者)背包是否還有那張想要換出去的券
         const mySnap = await getDoc(currentUserRef);
         let myBag = mySnap.data().bag || [];
 
@@ -401,23 +392,18 @@ window.acceptTradeCloud = async function(tradeId) {
             return Swal.fire('物品不見了', `妳的背包裡好像沒有【${tradeData.wantItem}】囉！`, 'error');
         }
 
-        // B. 開始進行雙方背包物品大對調
-        // 1. 扣除買家背包裡的 wantItem，並塞入賣家的 offerItem
         const itemIdx = myBag.indexOf(tradeData.wantItem);
         myBag.splice(itemIdx, 1);
         myBag.unshift(tradeData.offerItem);
         await updateDoc(currentUserRef, { bag: myBag });
 
-        // 2. 找到賣家的雲端背包，把買家付出的 wantItem 塞進賣家背包
         const sellerUserRef = doc(db, "users", tradeData.sellerUid);
         const sellerSnap = await getDoc(sellerUserRef);
         let sellerBag = sellerSnap.data().bag || [];
         sellerBag.unshift(tradeData.wantItem);
         await updateDoc(sellerUserRef, { bag: sellerBag });
 
-        // 3. 把雲端市集的案件狀態改為已完成 (Completed) 結案
         await updateDoc(tradeRef, { status: "completed", buyerUid: currentUserId });
-
         Swal.fire('交換成功！', `🤝 順利完成了物品交換！快去背包檢查吧！`, 'success');
 
     } catch (e) {
@@ -425,19 +411,21 @@ window.acceptTradeCloud = async function(tradeId) {
     }
 };
 
-// 4. 下架交換請求，把凍結的禮物券退回背包
 window.cancelTradeCloud = async function(tradeId, offerItem) {
     try {
         await updateDoc(doc(db, "market_trades", tradeId), { status: "cancelled" });
-        
-        // 退回背包
         const userSnap = await getDoc(currentUserRef);
         const currentBag = userSnap.data().bag || [];
         currentBag.unshift(offerItem);
         await updateDoc(currentUserRef, { bag: currentBag });
-
         Swal.fire('已下架', `【${offerItem}】已成功退回到妳的背包🎒。`, 'info');
     } catch (e) {
         console.error(e);
     }
 };
+
+// 預留未開發按鈕，避免噴錯
+window.joinTeamChallenge = function() { Swal.fire('2~8人組隊共答', '此核心架構功能開發中！', 'info'); };
+window.simulateGacha = function() { Swal.fire('盲盒抽獎模組', '此盲盒大機率保底機制開發中！', 'info'); };
+window.createDeposit = function() { Swal.fire('複利金庫投資', '此複利定存投資模組開發中！', 'info'); };
+window.submitPost = function() { Swal.fire('同班交誼廣場', '此留言與配戴徽章功能開發中！', 'info'); };
