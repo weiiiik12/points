@@ -4,15 +4,15 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 已將專案 ID 修改為 hago-award-system
+// 完美注入 hago-award-system 的專屬設定！
 const firebaseConfig = {
-    apiKey: "AIzaSyCArCzhRG6H-07Ooet34ikyP3w9xVq6t1U", // 註：若此金鑰無法連線，請至新專案後台複製新的 apiKey 替換
+    apiKey: "AIzaSyA84BEQc_szhvmbVlxVR_mXnCQ0E4auqTg",
     authDomain: "hago-award-system.firebaseapp.com",
     projectId: "hago-award-system",
-    storageBucket: "hago-award-system.appspot.com", // Firebase 預設通常為 .appspot.com 或 .firebasestorage.app
-    messagingSenderId: "980449979485", // 建議同步替換為新專案的發送者 ID
-    appId: "1:980449979485:web:652d6b419385e76ad071b4", // 建議同步替換為新專案的應用程式 ID
-    measurementId: "G-L86Y9Y477Y"
+    storageBucket: "hago-award-system.firebasestorage.app",
+    messagingSenderId: "959940017225",
+    appId: "1:959940017225:web:60ec11488e7468038f5398",
+    measurementId: "G-FVFNDK2N0G"
 };
 
 let app, auth, db, analytics;
