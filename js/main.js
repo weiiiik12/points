@@ -1,42 +1,75 @@
 // js/main.js
-import { auth, db } from './firebase-init.js';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-let currentUserRef = null;
-let currentUserId = null;
 
 // ----------------------------------------------------
-// 🔐 登入狀態監聽與自動初始化
+// 🔐 自訂學號登入系統 (取代原本的 Firebase Auth 郵件登入)
 // ----------------------------------------------------
-onAuthStateChanged(auth, async (user) => {
-    const loginOverlay = document.getElementById('login-overlay');
-    const mainApp = document.getElementById('main-app');
 
-    if (user) {
-        currentUserId = user.uid;
-        currentUserRef = doc(db, "users", user.uid);
-        
-        const userSnap = await getDoc(currentUserRef);
-        if (!userSnap.exists()) {
-            await setDoc(currentUserRef, {
-                name: user.email.split('@')[0],
-                points: 0,
-                bag: [],
-                achievements: []
-            });
+// 檢查瀏覽器在地快照，看看這台電腦上次是不是已經登入過了
+window.addEventListener('load', () => {
+    const savedUserId = localStorage.getItem('currentStudentId');
+    if (savedUserId) {
+        logInSuccess(savedUserId, localStorage.getItem('currentStudentName'));
+    }
+});
+
+// 處理學生的登入點擊
+document.getElementById('btn-login').addEventListener('click', async () => {
+    const studentId = document.getElementById('email-input').value.trim(); // 拿學號
+    const inputPassword = document.getElementById('password-input').value.trim(); // 拿密碼
+    const errorBox = document.getElementById('login-error-msg');
+
+    if (!studentId || !inputPassword) {
+        return errorBox.innerText = "學號和密碼都要填喔！";
+    }
+
+    try {
+        // 直接去雲端 users 資料夾找尋以該學號為名稱的文件
+        const studentRef = doc(db, "users", studentId);
+        const studentSnap = await getDoc(studentRef);
+
+        if (!studentSnap.exists()) {
+            return errorBox.innerText = "❌ 找不到這個學號，請跟老師確認！";
         }
 
-        document.getElementById('user-email-display').innerText = user.email;
-        loginOverlay.style.display = 'none';
-        mainApp.style.display = 'block';
+        const studentData = studentSnap.data();
 
-        startListeningData();
-        checkWeekendStatus();
-    } else {
-        loginOverlay.style.display = 'flex';
-        mainApp.style.display = 'none';
+        // 核對密碼是否正確
+        if (studentData.password === inputPassword) {
+            errorBox.innerText = "";
+            // 將登入狀態存在學生的電腦裡（下次開網頁免重新登入）
+            localStorage.setItem('currentStudentId', studentId);
+            localStorage.setItem('currentStudentName', studentData.name);
+            
+            // 執行登入成功流程
+            logInSuccess(studentId, studentData.name);
+        } else {
+            errorBox.innerText = "❌ 密碼不對喔，再想一下！";
+        }
+
+    } catch (e) {
+        errorBox.innerText = "連線失敗：" + e.message;
     }
+});
+
+// 登入成功的動作
+function logInSuccess(studentId, studentName) {
+    currentUserId = studentId;
+    currentUserRef = doc(db, "users", studentId);
+
+    document.getElementById('user-email-display').innerText = `${studentName} (座號:${studentId})`;
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+
+    // 啟動資料庫即時直播監聽
+    startListeningData();
+    startListeningMarket();
+    checkWeekendStatus();
+}
+
+// 登出按鈕
+document.getElementById('btn-logout').addEventListener('click', () => {
+    localStorage.clear(); // 清除在地登入快照
+    location.reload();    // 重新整理網頁，大門就會自動重新鎖上
 });
 
 // ----------------------------------------------------
