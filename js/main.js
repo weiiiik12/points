@@ -471,7 +471,7 @@ function switchChild(idx) {
     if(lastMarketSnapshot) renderMarketListUI(lastMarketSnapshot);
     if(lastRequestSnapshot) checkFriendRequestsUI(lastRequestSnapshot); 
 
-    // 💡 呼叫最新防刷小學堂系統
+    // 💡 確保安全載入新問答挑戰系統
     if (typeof window.renderDailyQuizSystem === 'function') {
         window.renderDailyQuizSystem(); 
     }
@@ -509,6 +509,7 @@ function performSwitchTab(id) {
     if(id === 'tab-social') renderFriendList();
 }
 
+// 徹底除雷乾淨版 updateUI，防範 null 當機
 function updateUI() {
     if(!data) return;
     const scoreDisplayEl = document.getElementById('scoreDisplay');
@@ -656,15 +657,15 @@ function useItem(idx) {
 }
 
 window.addPoints = function() {};
-function openSettings() {}
-function saveSettings() {}
-function renderSettingsChildList() {}
-function addNewChildFromSettings() {}
-function renderPrizeManager() {}
-function addCustomPrize() {}
-function fireConfetti() {}
-function showAppGuide() {}
-function showChangelog() {}
+window.openSettings = function() {};
+window.saveSettings = function() {};
+window.renderSettingsChildList = function() {};
+window.addNewChildFromSettings = function() {};
+window.renderPrizeManager = function() {};
+window.addCustomPrize = function() {};
+window.fireConfetti = function() {};
+window.showAppGuide = function() {};
+window.showChangelog = function() {};
 
 // === 全域生命週期綁定 ===
 window.switchChild = switchChild;
