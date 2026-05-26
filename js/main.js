@@ -471,7 +471,7 @@ function switchChild(idx) {
     if(lastMarketSnapshot) renderMarketListUI(lastMarketSnapshot);
     if(lastRequestSnapshot) checkFriendRequestsUI(lastRequestSnapshot); 
 
-    // 💡 呼叫最新的防刷小學堂挑戰功能
+    // 💡 呼叫最新防刷小學堂系統
     if (typeof window.renderDailyQuizSystem === 'function') {
         window.renderDailyQuizSystem(); 
     }
@@ -509,7 +509,6 @@ function performSwitchTab(id) {
     if(id === 'tab-social') renderFriendList();
 }
 
-// 徹底除雷乾淨版 updateUI，移除所有消失的轉盤 null 欄位
 function updateUI() {
     if(!data) return;
     const scoreDisplayEl = document.getElementById('scoreDisplay');
@@ -597,7 +596,6 @@ function animateScore(start, end, duration) {
     run();
 }
 
-// === 舊抽獎邏輯保留 ===
 function startGacha() {
     const buffs = getBuffedSettings();
     const cost = buffs.effectiveCost;
@@ -689,7 +687,7 @@ window.restoreDefaultPrizes = function() {};
 window.writeToAuthor = function() {};
 window.resetAll = function() {};
 window.exportData = function() {};
-window.importData = function() {};
+window.importData = function(input) {};
 window.renameChildSettings = function(i) {};
 window.deleteChildSettings = function(i) {};
 
