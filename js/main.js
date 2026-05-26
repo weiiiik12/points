@@ -511,6 +511,8 @@ function performSwitchTab(id) {
 
 function updateUI() {
     if(!data) return;
+    
+    // 1. 確保分數同步更新與動畫
     const scoreDisplayEl = document.getElementById('scoreDisplay');
     if (currentDisplayedScore !== data.score) {
         animateScore(currentDisplayedScore, data.score, 1000);
@@ -519,13 +521,9 @@ function updateUI() {
         if(scoreDisplayEl) scoreDisplayEl.innerText = data.score;
     }
 
+    // 2. 更新銀行定存與活存利率顯示 (如果有這些欄位的話，加上安全防護)
     const buffs = getBuffedSettings();
-
-    // 顯示利率
     let dRateHtml = parseFloat((masterData.settings.dailyInterest * 100).toFixed(2)) + '%';
-    if (buffs.effectiveDailyRate > masterData.settings.dailyInterest) {
-        dRateHtml = `<span style="text-decoration:line-through; font-size:0.8em; color:#ddd;">${dRateHtml}</span> <span style="color:#ffeaa7;">${(buffs.effectiveDailyRate*100).toFixed(2)}%</span><span class="buff-tag">VIP</span>`;
-    }
     const dispDailyRateEl = document.getElementById('dispDailyRate');
     if(dispDailyRateEl) dispDailyRateEl.innerHTML = dRateHtml;
     
@@ -533,9 +531,6 @@ function updateUI() {
     if(dispInterestHourEl) dispInterestHourEl.innerText = masterData.settings.interestHour;
 
     let fRateHtml = parseFloat((masterData.settings.fixedDepositRate * 100).toFixed(2)) + '%';
-    if (buffs.effectiveFixedRate > masterData.settings.fixedDepositRate) {
-        fRateHtml = `<span style="text-decoration:line-through; font-size:0.8em; color:#ddd;">${fRateHtml}</span> <span style="color:#ffeaa7;">${(buffs.effectiveFixedRate*100).toFixed(2)}%</span><span class="buff-tag">黑卡</span>`;
-    }
     const dispFixedRateEl = document.getElementById('dispFixedRate');
     if(dispFixedRateEl) dispFixedRateEl.innerHTML = fRateHtml;
     
@@ -551,41 +546,10 @@ function updateUI() {
     const estInterestFormulaEl = document.getElementById('estInterestFormula');
     if(estInterestFormulaEl) estInterestFormulaEl.innerText = `(目前點數 ${data.score} × 利率 ${dailyRate.toFixed(4)} = ${todayEst})`;
 
-    // 機率與保底
-    const currentTiers = getCurrentTiers();
-    currentTiers.forEach((t, i) => { const el = document.getElementById(`label-prob${i}`); if(el) el.innerText = t.chance + "%"; });
-    
-    const limitRareEl = document.getElementById('limitRare');
-    if(limitRareEl) limitRareEl.innerText = masterData.settings.pityRareThreshold;
-    
-    let legLimitHtml = masterData.settings.pityLegendaryThreshold;
-    if (buffs.effectivePityLeg < masterData.settings.pityLegendaryThreshold) {
-        legLimitHtml = `<span style="text-decoration:line-through; color:#aaa;">${legLimitHtml}</span> <span style="color:#d63031; font-weight:bold;">${buffs.effectivePityLeg}</span>`;
-    }
-    const limitLegEl = document.getElementById('limitLeg');
-    if(limitLegEl) limitLegEl.innerHTML = legLimitHtml;
-    
-    const limitTargetNameEl = document.getElementById('limitTargetName');
-    if(limitTargetNameEl) limitTargetNameEl.innerText = (masterData.settings.pityBigTarget == 4) ? "傳奇+" : "神話";
-    
-    const pityRareDispEl = document.getElementById('pityRareDisp');
-    if(pityRareDispEl) pityRareDispEl.innerText = data.pityRare;
-    
-    const pityLegDispEl = document.getElementById('pityLegDisp');
-    if(pityLegDispEl) pityLegDispEl.innerText = data.pityLegendary;
+    // ⚠️ 這裡原本有很大一段「機率與保底按鈕 (btnDraw、limitRare、pityRareDisp)」的程式碼
+    // 因為 index.html 已經改成挑戰小學堂了，我們把那些通通移除，防範 null 崩潰！
 
-    // 抽獎按鈕
-    const btn = document.getElementById('btnDraw');
-    if(btn) {
-        const cost = buffs.effectiveCost;
-        let btnText = `啟動轉盤 (-${cost}點)`;
-        if (cost < masterData.settings.gachaCost) btnText += " 🔥優惠中";
-        
-        if (data.score < cost) { btn.innerText = `點數不足 (缺${cost - data.score})`; btn.disabled = true; } 
-        else { btn.innerText = btnText; btn.disabled = false; }
-    }
-    
-    // 背包
+    // 3. 渲染背包
     const bagList = document.getElementById('bagList'); 
     if(bagList) {
         bagList.innerHTML = '';
@@ -606,7 +570,7 @@ function updateUI() {
         }
     }
     
-    // 歷史紀錄
+    // 4. 渲染歷史紀錄
     const histList = document.getElementById('historyList');
     if(histList) histList.innerHTML = data.history.slice().reverse().map(h => `<div style="border-bottom:1px solid #eee; padding:8px 0;">${h.date} - ${h.reason} <span style="float:right; font-weight:bold; color:${h.amount>0?'#00b894':'#e17055'}">${h.amount}</span></div>`).join('');
     
