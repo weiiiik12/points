@@ -314,3 +314,167 @@ body.golden-mode {
 .badge-option { font-size: 2rem; padding: 10px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; text-align: center; }
 .badge-option:hover { background: #f0f0f0; border-color: #ccc; }
 .badge-option.selected { border-color: #4a90e2; background: #e3f2fd; }
+
+
+/* ==========================================================================
+   🎮 挑戰小學堂 - 全功能視覺美化樣式
+   ========================================================================== */
+
+/* 基礎字體與全域微調（確保中文閱讀體感） */
+body {
+    font-family: "PingFang TC", "Microsoft JhengHei", sans-serif !important;
+}
+
+/* 統一的外殼卡片 */
+.school-card-box {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #eef2f5;
+}
+
+/* 卡片右上角的小標籤 */
+.school-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 4px 12px;
+    border-bottom-left-radius: 12px;
+}
+
+.school-title {
+    margin: 0 0 6px 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.school-desc {
+    margin: 0 0 15px 0;
+    font-size: 0.88rem;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+/* 輸入框風格統一 */
+.school-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.school-input:focus {
+    border-color: #4a90e2;
+}
+
+/* 主色調按鈕 */
+.btn-school-action {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+    transition: transform 0.1s, opacity 0.2s;
+    text-align: center;
+}
+.btn-school-action:active {
+    transform: scale(0.98);
+}
+
+/* 篩選按鈕列與標籤 */
+.filter-row {
+    display: flex;
+    align-items: center;
+}
+.filter-label {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #475569;
+    min-width: 70px;
+}
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.btn-filter-opt {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-filter-opt:hover {
+    background: #e2e8f0;
+}
+.btn-filter-opt.active {
+    background: #2d3748;
+    border-color: #2d3748;
+    color: white;
+}
+
+/* 預留的空白關卡按鈕矩陣 */
+.level-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    gap: 10px;
+}
+.btn-level-placeholder {
+    background: #ffffff;
+    border: 2px dashed #cbd5e1;
+    color: #94a3b8;
+    padding: 12px 8px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+.btn-level-placeholder:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+    color: #64748b;
+}
+
+/* 答題遊玩區塊內部美化 */
+.quiz-play-zone {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid #edf2f7;
+    min-height: 80px;
+}
+.quiz-finish-msg {
+    text-align: center;
+    color: #ef4444;
+    font-weight: bold;
+    font-size: 1.05rem;
+    padding: 15px 0;
+    animation: pulseMsg 2s infinite;
+}
+@keyframes pulseMsg {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
