@@ -3,6 +3,7 @@ import { auth, db, initError } from './firebase-init.js';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged, sendPasswordResetEmail, updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc, setDoc, addDoc, collection, query, where, orderBy, limit, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { DEFAULT_TIERS, ACHIEVEMENT_LIST } from './constants.js';
+import { DAILY_QUESTIONS } from './questions.js';
 
 // SweetAlert Toast
 const Toast = Swal.mixin({
@@ -46,6 +47,7 @@ function createNewChildData() {
         score: 0, bag: [], history: [], achievements: [], 
         pityRare: 0, pityLegendary: 0, lastLoginDate: "", deposits: [], statDepositDays: 0,
         friends: [], 
+        answeredQuestions: [], // 新增：用來記錄這個學生已經答對了哪些題目的 ID
         tiers: JSON.parse(JSON.stringify(DEFAULT_TIERS)) 
     };
 }
@@ -436,6 +438,7 @@ function switchChild(idx) {
     if(lastMarketSnapshot) renderMarketListUI(lastMarketSnapshot);
     if(lastRequestSnapshot) checkFriendRequestsUI(lastRequestSnapshot); 
 
+    renderDailyQuiz(); // 切換或登入時，載入學生的答題進度
     updateUI();
 }
 
@@ -1351,3 +1354,129 @@ window.exportData = function() { const a = document.createElement('a'); a.href =
 window.importData = function(input) { const f = input.files[0]; if (!f) return; const r = new FileReader(); r.onload = function(e) { try { const imp = JSON.parse(e.target.result); if(imp.children) masterData = imp; else { masterData.children = [{name:"寶貝1", data:imp}]; masterData.currentIdx=0; } saveData(); Swal.fire('還原成功', '', 'success'); switchChild(0); } catch(err) { Swal.fire('格式錯誤', '', 'error'); } }; r.readAsText(f); input.value = ''; };
 window.renameChildSettings = async function(i) { const {value:n}=await Swal.fire({input:'text',inputValue:masterData.children[i].name,showCancelButton:true}); if(n){masterData.children[i].name=n; saveData(); renderSettingsChildList(); switchChild(masterData.currentIdx);} };
 window.deleteChildSettings = function(i) { if(masterData.children.length<=1) return Swal.fire('無法刪除','至少保留一位','error'); masterData.children.splice(i,1); if(masterData.currentIdx>=masterData.children.length) masterData.currentIdx=0; saveData(); renderSettingsChildList(); switchChild(masterData.currentIdx); };
+
+// ==========================================
+// 🎯 皓孩子獎點網：答題與序號系統
+// ==========================================
+
+// 老師的序號資料庫 (目前先寫死在前端，未來可以移到 Firebase 達成動態發放)
+const PROMO_CODES = {
+    "GOODJOB888": { points: 100, reason: "課堂表現優異兌換" },
+    "ENGLISHKING": { points: 150, reason: "英文單字比賽獲勝" },
+    "COMPLETE100": { points: 50, reason: "作業認真完成獎勵" }
+};
+
+// 渲染當日題目
+function renderDailyQuiz() {
+    const container = document.getElementById('quizContainer');
+    if (!container) return;
+
+    if (!data.answeredQuestions) data.answeredQuestions = [];
+
+    // 挑選一題學生還沒答對的題目
+    const activeQuestion = DAILY_QUESTIONS.find(q => !data.answeredQuestions.includes(q.id));
+
+    if (!activeQuestion) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:20px;">
+                <span style="font-size:3rem;">🎉</span>
+                <h3 style="color:#2ecc71; margin-bottom:5px;">太厲害了！</h3>
+                <p style="color:#666; margin-top:0;">你已經完成了目前所有的常態挑戰，明天的課堂上要繼續加油喔！</p>
+            </div>`;
+        return;
+    }
+
+    // 渲染題目與選項
+    let optionsHtml = activeQuestion.options.map((opt, idx) => `
+        <button class="big-btn" style="font-size:1.1rem; padding:12px; margin-top:10px; background:linear-gradient(135deg, #f1f2f6 0%, #dfe6e9 100%); color:#2d3436; box-shadow:none; border:2px solid #b2bec3;" 
+                onclick="submitAnswer(${activeQuestion.id}, ${idx})">
+            ${idx + 1}. ${opt}
+        </button>
+    `).join('');
+
+    container.innerHTML = `
+        <div style="font-size:0.85rem; color:#6c5ce7; font-weight:bold; margin-bottom:5px;">💰 本題獎勵：${activeQuestion.points} 點數</div>
+        <h3 style="color:#2d3436; margin-top:0; line-height:1.4;">${activeQuestion.question}</h3>
+        <div style="display:flex; flex-direction:column;">
+            ${optionsHtml}
+        </div>
+    `;
+}
+
+// 學生點擊選項提交答案
+window.submitAnswer = function(questionId, chosenIdx) {
+    const q = DAILY_QUESTIONS.find(item => item.id === questionId);
+    if (!q) return;
+
+    if (chosenIdx === q.answer) {
+        // 答對了！
+        data.score += q.points;
+        if (!data.answeredQuestions) data.answeredQuestions = [];
+        data.answeredQuestions.push(q.id); // 記錄已答對
+
+        const now = new Date();
+        const d = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        data.history.push({ date: d, reason: `答對問答挑戰: ${q.question.slice(0,10)}...`, amount: q.points });
+
+        saveData(); // 儲存至 Firebase 雲端
+        checkAchievements(); // 檢查成就
+
+        Swal.fire({
+            title: '🎉 答對了！',
+            text: `恭喜獲得 ${q.points} 點數！`,
+            icon: 'success',
+            confirmButtonText: '下一題',
+            confirmButtonColor: '#6c5ce7'
+        }).then(() => {
+            renderDailyQuiz(); // 刷新題目
+        });
+    } else {
+        // 答錯了
+        Swal.fire({
+            title: '❌ 答錯囉！',
+            text: '沒關係，再仔細想一想，你一定可以的！',
+            icon: 'error',
+            confirmButtonText: '重新挑戰',
+            confirmButtonColor: '#ff7675'
+        });
+    }
+};
+
+// 🎟️ 兌換碼功能
+window.redeemPromoCode = function() {
+    const input = document.getElementById('promoCodeInput');
+    if (!input) return;
+
+    const code = input.value.trim().toUpperCase(); // 自動轉大寫避免大小寫出錯
+    if (!code) return Swal.fire('提示', '請輸入兌換碼！', 'info');
+
+    // 檢查系統有沒有這個序號
+    if (PROMO_CODES[code]) {
+        const reward = PROMO_CODES[code];
+
+        // 檢查歷史紀錄，避免學生重複兌換同一個序號
+        const alreadyUsed = data.history.some(h => h.reason.includes(`兌換碼:${code}`));
+        if (alreadyUsed) {
+            return Swal.fire('注意', '這個兌換碼你已經領過囉！', 'warning');
+        }
+
+        // 發放點數
+        data.score += reward.points;
+        const now = new Date();
+        const d = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        data.history.push({ date: d, reason: `使用序號兌換碼:${code} (${reward.reason})`, amount: reward.points });
+
+        saveData();
+        input.value = ''; // 清空輸入框
+
+        Swal.fire({
+            title: '🎟️ 兌換成功！',
+            html: `獲得獎勵：<b>${reward.points}</b> 點！<br><span style="color:#666; font-size:0.9rem;">(${reward.reason})</span>`,
+            icon: 'success',
+            confirmButtonText: '太棒了！',
+            confirmButtonColor: '#1e88e5'
+        });
+    } else {
+        Swal.fire('錯誤', '找不到這個兌換碼，請確認英文字母有沒有打錯喔！', 'error');
+    }
+};
