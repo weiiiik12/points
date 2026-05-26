@@ -190,42 +190,80 @@
 </div>
 
 <div class="nav">
-    <button class="nav-btn active" onclick="switchTab('tab-gacha')">🎰 抽獎</button>
+    <button class="nav-btn active" onclick="switchTab('tab-gacha')">🎰 挑戰小學堂</button>
     <button class="nav-btn" onclick="switchTab('tab-bag')">🎒 背包</button>
     <button class="nav-btn" onclick="switchTab('tab-social')">💬 廣場</button> <button class="nav-btn" onclick="switchTab('tab-market')">🏙️ 市集</button>
     <button class="nav-btn" onclick="switchTab('tab-bank')">🏦 銀行</button>
-    <button class="nav-btn" onclick="switchTab('tab-admin')">⚙️ 家長</button>
+    <button class="nav-btn" onclick="switchTab('tab-admin')">⚙️ 設定</button>
 </div>
 
 <div id="tab-gacha" class="section active">
     
-    <div class="admin-box" style="background: #e3f2fd; border: 1px solid #90caf9;">
-        <h3 style="margin-top:0; color:#1e88e5;">🎟️ 老師獎勵兌換碼</h3>
-        <p style="font-size:0.85rem; color:#555; margin-bottom:10px;">輸入老師在課堂上發放的專屬序號，即可直接兌換獎勵點數！</p>
-        <div style="display:flex; gap:5px;">
-            <input type="text" id="promoCodeInput" class="admin-input" style="margin:0; text-transform: uppercase;" placeholder="輸入兌換碼 (例如: EXCELLENT)">
-            <button class="btn-admin" style="width:90px; background:#1e88e5; font-weight:bold;" onclick="redeemPromoCode()">兌換</button>
+    <div class="school-card-box" style="border-left: 5px solid #1e88e5;">
+        <h3 class="school-title" style="color:#1e88e5;">🎟️ 老師獎勵兌換碼</h3>
+        <p class="school-desc">輸入老師在課堂上發放的專屬序號，即可直接兌換獎勵點數！</p>
+        <div style="display:flex; gap:10px;">
+            <input type="text" id="promoCodeInput" class="school-input" style="text-transform: uppercase;" placeholder="輸入兌換碼 (例如: GOODJOB888)">
+            <button class="btn-school-action" style="width:100px; background:#1e88e5;" onclick="redeemPromoCode()">兌換</button>
         </div>
     </div>
 
-    <div class="roulette-container" style="display:block; margin-top:20px;">
-        <div class="bank-card" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); box-shadow: 0 4px 15px rgba(108,92,231,0.3);">
-            <div class="bank-rate">📝 皓孩子每日問答</div>
-            <div class="bank-desc">常態挑戰：每天認真答題，獲取豐富知識與點數獎勵！</div>
-        </div>
+    <div class="school-card-box" style="border-left: 5px solid #6c5ce7;">
+        <div class="school-badge" style="background:#6c5ce7;">每日任務</div>
+        <h3 class="school-title" style="color:#6c5ce7;">📝 皓孩子每日問答</h3>
+        <p class="school-desc">每天只限挑戰 5 題，每答對一題可獲得 <span style="color:#6c5ce7; font-weight:bold;">10 點</span> 獎勵！</p>
         
-        <div id="quizContainer" style="background:white; padding:20px; border-radius:15px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
-            <p style="color:#999; text-align:center;">題目載入中...</p>
+        <div id="quizContainer" class="quiz-play-zone">
+            </div>
+    </div>
+
+    <div class="school-card-box" style="border-left: 5px solid #00b894;">
+        <div class="school-badge" style="background:#00b894;">進階挑戰</div>
+        <h3 class="school-title" style="color:#00b894;">📚 分科挑戰</h3>
+        <p class="school-desc">選擇你想挑戰的領域，證明自己的實力，賺取更多學科積分！</p>
+        
+        <div class="filter-group">
+            <div class="filter-row">
+                <span class="filter-label">選擇年級：</span>
+                <div class="filter-buttons" id="gradeFilterGroup">
+                    <button class="btn-filter-opt active" onclick="selectGrade(this, 'g1')">一年級</button>
+                    <button class="btn-filter-opt" onclick="selectGrade(this, 'g2')">二年級</button>
+                    <button class="btn-filter-opt" onclick="selectGrade(this, 'g3')">三年級</button>
+                </div>
+            </div>
+            <div class="filter-row" style="margin-top: 10px;">
+                <span class="filter-label">選擇科目：</span>
+                <div class="filter-buttons" id="subjectFilterGroup">
+                    <button class="btn-filter-opt active" onclick="selectSubject(this, 'math')">🧮 數學</button>
+                    <button class="btn-filter-opt" onclick="selectSubject(this, 'eng')">🔤 英文</button>
+                    <button class="btn-filter-opt" onclick="selectSubject(this, 'chi')">✍️ 國語</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
+            <div style="font-size: 0.85rem; color: #718096; margin-bottom: 10px; font-weight: bold;">🎯 請選擇挑戰關卡：</div>
+            <div class="level-btn-grid">
+                <button class="btn-level-placeholder" onclick="handlePlaceholderClick(1)">🔒 關卡 01 (內容調整中)</button>
+                <button class="btn-level-placeholder" onclick="handlePlaceholderClick(2)">🔒 關卡 02 (內容調整中)</button>
+                <button class="btn-level-placeholder" onclick="handlePlaceholderClick(3)">🔒 關卡 03 (內容調整中)</button>
+                <button class="btn-level-placeholder" onclick="handlePlaceholderClick(4)">🔒 關卡 04 (內容調整中)</button>
+            </div>
         </div>
     </div>
-</div>
 
-    <div id="externalGameContainer" style="margin-top: 20px; background: #fffbf0; padding: 20px; border-radius: 15px; border: 1px dashed #f1c40f;">
-    <h3 style="margin-top:0; color:#d35400;">🎮 課堂單字限時挑戰</h3>
-    <p style="font-size:0.85rem; color:#666; margin-bottom:15px;">前往單字遊戲挑戰，考考你的英文字彙量！通關可以直接獲得點數回饋並列入全班排行喔！</p>
-    <button id="btnGoVocabGame" class="big-btn" style="background: linear-gradient(135deg, #ffbc42 0%, #d35400 100%); font-weight:bold; margin-top:0;" onclick="goToVocabGame()">
-        🚀 開始單字遊戲挑戰
-    </button>
+    <div class="school-card-box" style="border-left: 5px solid #e17055;">
+        <div class="school-badge" style="background:#e17055;">限時副本</div>
+        <h3 class="school-title" style="color:#e17055;">⚔️ 單字討伐</h3>
+        <p class="school-desc">進入背單字的終極戰場！擊敗單字魔王，將贏得的點數全數同步回中央銀行！</p>
+        
+        <div style="text-align: center; margin-top: 15px;">
+            <a href="https://weiiiik12.github.io/parents-quiz/" target="_blank" class="btn-school-action" style="background: linear-gradient(135deg, #e17055 0%, #ff7675 100%); display: inline-block; text-decoration: none; font-size: 1rem; padding: 12px 0;">
+                🚀 開始「單字討伐」遊戲挑戰
+            </a>
+        </div>
+    </div>
+
 </div>
 
 <div id="tab-bag" class="section">
