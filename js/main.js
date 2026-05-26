@@ -446,20 +446,60 @@ document.getElementById('btnLogout').addEventListener('click', () => {
         .then((result) => { if (result.isConfirmed) signOut(auth).then(() => { location.reload(); }); });
 });
 
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        currentUser = user;
-        userRef = doc(db, "users", user.uid);
-        isGuest = user.isAnonymous;
-        document.getElementById('userEmail').innerText = isGuest ? "👻 遊客 (ID:" + user.uid.slice(0,5) + ")" : user.email;
-        loginOverlay.style.display = 'none';
-        await loadDataFromCloud();
-        setInterval(updateTimerAndDeposits, 1000);
+// === 修正安全版：檢查有沒有從單字遊戲帶回來的獎勵點數 ===
+const mainUrlParams = new URLSearchParams(window.location.search);
+
+// 🔍 只有當網址真的有「completedGame」這個參數時，才啟動結算邏輯
+if (mainUrlParams.has('completedGame') && mainUrlParams.get('completedGame') === 'vocab' && currentUser) {
+    const gamePoints = parseInt(mainUrlParams.get('points') || '0');
+    const targetIdx = parseInt(mainUrlParams.get('idx') || '0');
+    const incomingAuth = mainUrlParams.get('auth');
+
+    // 安全驗證
+    const expectedAuth = btoa(`hago_${gamePoints}_${currentUser.uid}`);
+
+    if (incomingAuth === expectedAuth && gamePoints > 0) {
+        // 確保 masterData 的結構安全
+        if (masterData.children && masterData.children[targetIdx]) {
+            const tokenReason = `🎮 單字挑戰過關獎勵(驗證碼:${incomingAuth.slice(0,8)})`;
+            const alreadyClaimed = masterData.children[targetIdx].data.history.some(h => h.reason === tokenReason);
+
+            if (!alreadyClaimed) {
+                // 正式注入點數
+                masterData.children[targetIdx].data.score += gamePoints;
+                
+                const now = new Date();
+                const d = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                masterData.children[targetIdx].data.history.push({
+                    date: d,
+                    reason: tokenReason,
+                    amount: gamePoints
+                });
+
+                // 儲存至 Firebase 雲端
+                saveData();
+                
+                // 延遲一小段時間再更新 UI，防止 HTML 元素還沒長好就去設定 innerText
+                setTimeout(() => {
+                    if (typeof updateUI === 'function') updateUI();
+                }, 100);
+
+                // 彈出成功大視窗
+                Swal.fire({
+                    title: '✨ 跨界挑戰成功！',
+                    html: `成功同步單字遊戲成果！<br>已幫 <b>${masterData.children[targetIdx].name}</b> 存入 <b>${gamePoints}</b> 點數！`,
+                    icon: 'success',
+                    confirmButtonColor: '#6c5ce7'
+                }).then(() => {
+                    // 清除網址參數，保持網址乾淨
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                });
+            }
+        }
     } else {
-        loginOverlay.style.display = 'flex';
-        loadingMsg.style.display = 'none';
+        console.warn("驗證失敗或參數不正確。");
     }
-});
+}
 
 // === UI 控制邏輯 ===
 let currentPinInput = "";
