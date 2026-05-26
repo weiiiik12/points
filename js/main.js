@@ -1480,3 +1480,21 @@ window.redeemPromoCode = function() {
         Swal.fire('錯誤', '找不到這個兌換碼，請確認英文字母有沒有打錯喔！', 'error');
     }
 };
+
+// 帶入學生資料並跳轉至單字遊戲
+window.goToVocabGame = function() {
+    if (!currentUser) {
+        Swal.fire('提示', '請先登入帳號再進行挑戰喔！', 'warning');
+        return;
+    }
+    
+    const childName = masterData.children[masterData.currentIdx].name;
+    const studentUid = currentUser.uid;
+    const currentChildIdx = masterData.currentIdx;
+    
+    // 建立帶有參數的單字遊戲網址
+    const gameUrl = `https://weiiiik12.github.io/vocab-game/?uid=${studentUid}&name=${encodeURIComponent(childName)}&idx=${currentChildIdx}`;
+    
+    // 開啟新分頁前往遊戲
+    window.open(gameUrl, '_blank');
+};
