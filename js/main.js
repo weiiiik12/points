@@ -130,6 +130,53 @@ async function loadDataFromCloud() {
         }
         
         switchChild(masterData.currentIdx);
+        // === 新增：檢查有沒有從單字遊戲帶回來的獎勵點數 ===
+const mainUrlParams = new URLSearchParams(window.location.search);
+if (mainUrlParams.get('completedGame') === 'vocab' && currentUser) {
+    const gamePoints = parseInt(mainUrlParams.get('points') || '0');
+    const targetIdx = parseInt(mainUrlParams.get('idx') || '0');
+    const incomingAuth = mainUrlParams.get('auth');
+
+    // 安全驗證：確保網址不是學生自己亂打字修改的
+    const expectedAuth = btoa(`hago_${gamePoints}_${currentUser.uid}`);
+
+    if (incomingAuth === expectedAuth && gamePoints > 0) {
+        // 檢查歷史紀錄，避免學生按重新整理「無限重複刷點數」
+        // 我們用一個獨一無二的暗號當作理由檢查
+        const tokenReason = `🎮 單字挑戰過關獎勵(驗證碼:${incomingAuth.slice(0,8)})`;
+        const alreadyClaimed = masterData.children[targetIdx].data.history.some(h => h.reason === tokenReason);
+
+        if (!alreadyClaimed) {
+            // 正式注入點數
+            masterData.children[targetIdx].data.score += gamePoints;
+            
+            const now = new Date();
+            const d = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            masterData.children[targetIdx].data.history.push({
+                date: d,
+                reason: tokenReason,
+                amount: gamePoints
+            });
+
+            // 儲存至 Firebase 雲端
+            saveData();
+            updateUI();
+
+            // 彈出成功大視窗
+            Swal.fire({
+                title: '✨ 跨界挑戰成功！',
+                html: `成功同步單字遊戲成果！<br>已幫 <b>${masterData.children[targetIdx].name}</b> 存入 <b>${gamePoints}</b> 點數！`,
+                icon: 'success',
+                confirmButtonColor: '#6c5ce7'
+            }).then(() => {
+                // 清除網址上的網址參數，保持網址乾淨，避免重新整理時誤觸
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
+        }
+    } else {
+        console.warn("驗證失敗，可能是跨帳號或非法修改網址參數。");
+    }
+}
         saveData(); 
         checkAchievements(); 
         
