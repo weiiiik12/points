@@ -198,21 +198,26 @@
 </div>
 
 <div id="tab-gacha" class="section active">
-    <div class="roulette-container">
-        <div id="box-0" class="roulette-box box-common">普通<span id="label-prob0">60%</span></div>
-        <div id="box-1" class="roulette-box box-uncommon">罕見<span id="label-prob1">20%</span></div>
-        <div id="box-2" class="roulette-box box-rare">稀有<span id="label-prob2">10%</span></div>
-        <div id="box-3" class="roulette-box box-epic">史詩<span id="label-prob3">6%</span></div>
-        <div id="box-4" class="roulette-box box-legendary">傳奇<span id="label-prob4">3%</span></div>
-        <div id="box-5" class="roulette-box box-mythic">神話<span id="label-prob5">1%</span></div>
+    
+    <div class="admin-box" style="background: #e3f2fd; border: 1px solid #90caf9;">
+        <h3 style="margin-top:0; color:#1e88e5;">🎟️ 老師獎勵兌換碼</h3>
+        <p style="font-size:0.85rem; color:#555; margin-bottom:10px;">輸入老師在課堂上發放的專屬序號，即可直接兌換獎勵點數！</p>
+        <div style="display:flex; gap:5px;">
+            <input type="text" id="promoCodeInput" class="admin-input" style="margin:0; text-transform: uppercase;" placeholder="輸入兌換碼 (例如: EXCELLENT)">
+            <button class="btn-admin" style="width:90px; background:#1e88e5; font-weight:bold;" onclick="redeemPromoCode()">兌換</button>
+        </div>
     </div>
-    <button id="btnDraw" class="big-btn" onclick="startGacha()">啟動轉盤 (-100點)</button>
-    <div class="pity-info">
-        🛡️ <strong>保底進度</strong><br>
-        小保底 (稀有+)：<span id="pityRareDisp" style="color:#0984e3; font-weight:bold;">0</span> / <span id="limitRare">10</span><br>
-        大保底 (<span id="limitTargetName">神話</span>)：<span id="pityLegDisp" style="color:#d63031; font-weight:bold;">0</span> / <span id="limitLeg">100</span>
+
+    <div class="roulette-container" style="display:block; margin-top:20px;">
+        <div class="bank-card" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); box-shadow: 0 4px 15px rgba(108,92,231,0.3);">
+            <div class="bank-rate">📝 皓孩子每日問答</div>
+            <div class="bank-desc">常態挑戰：每天認真答題，獲取豐富知識與點數獎勵！</div>
+        </div>
+        
+        <div id="quizContainer" style="background:white; padding:20px; border-radius:15px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+            <p style="color:#999; text-align:center;">題目載入中...</p>
+        </div>
     </div>
-    <div id="finalResult"><span style="color:#aaa">準備抽獎...</span></div>
 </div>
 
 <div id="tab-bag" class="section">
