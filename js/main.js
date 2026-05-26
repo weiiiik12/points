@@ -1432,3 +1432,147 @@ window.goToVocabGame = function() {
     const gameUrl = `https://weiiiik12.github.io/vocab-game/?uid=${studentUid}&name=${encodeURIComponent(childName)}&idx=${currentChildIdx}`;
     window.open(gameUrl, '_blank');
 };
+
+
+// ==========================================================================
+// 🎮 挑戰小學堂核心邏輯模組（全新升級防刷版）
+// ==========================================================================
+
+// 模擬題目庫（每天隨機抽 5 題挑戰，可以自由修改這裡的題目內容）
+const CONST_DAILY_QUIZZES = [
+    { q: "請問 'School' 的中文是什麼？", a: ["蘋果", "學校", "老師", "書本"], correct: 1 },
+    { q: "老師常說的 'Listen carefully' 是什麼意思？", a: ["大聲朗讀", "仔細聆聽", "請回座位"], correct: 1 },
+    { q: "英文句子開頭的第一個字母通常要如何處理？", a: ["維持小寫", "全部加底線", "一定要大寫"], correct: 2 },
+    { q: "英文單字 'Beautiful' 的意思是什麼？", a: ["美麗的", "醜陋的", "帥氣的"], correct: 0 },
+    { q: "星期三的英文縮寫是哪一個？", a: ["Tue.", "Wed.", "Thu."], correct: 1 },
+    { q: "安親班的英文最接近哪一個？", a: ["After-school care center", "Library", "Gym"], correct: 0 }
+];
+
+// 初始化或更新每日問答區（限制 5 題）
+window.renderDailyQuizSystem = function() {
+    const container = document.getElementById('quizContainer');
+    if (!container || !data) return;
+
+    // 1. 確保結構安全，如果沒有紀錄就初始化
+    if (data.dailyQuizCount === undefined) data.dailyQuizCount = 0;
+    if (!data.dailyQuizDate) data.dailyQuizDate = new Date().toDateString();
+
+    // 2. 跨日檢查：如果系統日期跟紀錄日期不同，自動重置答題數
+    const todayStr = new Date().toDateString();
+    if (data.dailyQuizDate !== todayStr) {
+        data.dailyQuizCount = 0;
+        data.dailyQuizDate = todayStr;
+        saveData();
+    }
+
+    // 3. 核心判定：如果今天已經答滿 5 題，直接顯示金句
+    if (data.dailyQuizCount >= 5) {
+        container.innerHTML = `
+            <div class="quiz-finish-msg" style="text-align: center; color: #ef4444; font-weight: bold; font-size: 1.05rem; padding: 15px 0;">
+                🎉 今天已回答完畢~ 明天再加油!
+            </div>
+            <div style="text-align:center; font-size:0.8rem; color:#94a3b8; margin-top:5px;">
+                (每日答題上限：5 / 5 題)
+            </div>
+        `;
+        return;
+    }
+
+    // 4. 答題中狀態：隨機挑選一題來渲染
+    const randomIdx = Math.floor(Math.random() * CONST_DAILY_QUIZZES.length);
+    const quiz = CONST_DAILY_QUIZZES[randomIdx];
+
+    let optionsHtml = quiz.a.map((opt, idx) => `
+        <button class="btn-school-action" 
+                style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; margin-bottom:8px; text-align:left; padding:15px; font-weight:normal; width:100%; border-radius:10px; cursor:pointer;"
+                onclick="submitDailyQuizAnswer(${randomIdx}, ${idx})">
+            ${idx + 1}. ${opt}
+        </button>
+    `).join('');
+
+    container.innerHTML = `
+        <div style="font-size:0.95rem; font-weight:bold; color:#1e293b; margin-bottom:12px; text-align:left;">
+            <span style="background:#6c5ce7; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-right:5px;">
+                第 ${data.dailyQuizCount + 1} 題
+            </span> 
+            ${quiz.q}
+        </div>
+        <div style="display:flex; flex-direction:column;">
+            ${optionsHtml}
+        </div>
+    `;
+};
+
+// 處理每日問答的答案提交
+window.submitDailyQuizAnswer = function(quizIdx, selectedIdx) {
+    if (!data) return;
+    const quiz = CONST_DAILY_QUIZZES[quizIdx];
+
+    if (selectedIdx === quiz.correct) {
+        // 答對了！加 10 點
+        data.score += 10;
+        data.dailyQuizCount += 1;
+        
+        const now = new Date();
+        const d = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        data.history.push({ date: d, reason: `挑戰小學堂：答對每日問答`, amount: 10 });
+
+        saveData();
+
+        Swal.fire({
+            icon: 'success',
+            title: '答對了！',
+            text: '太棒了，獲得點數 10 點！💰',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            renderDailyQuizSystem(); // 刷新
+        });
+    } else {
+        // 答錯了，不給分，但也消耗一次今天的額度
+        data.dailyQuizCount += 1;
+        saveData();
+        
+        Swal.fire({
+            icon: 'error',
+            title: '答錯囉！',
+            text: '沒關係，下一題再接再厲！💪',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            renderDailyQuizSystem(); // 刷新
+        });
+    }
+};
+
+// ==========================================================================
+// 📚 分科挑戰 - 狀態控制與空白點擊處理邏輯
+// ==========================================================================
+let currentSelectedGrade = 'g1';
+let currentSelectedSubject = 'math';
+
+window.selectGrade = function(btnElement, gradeCode) {
+    const siblings = document.querySelectorAll('#gradeFilterGroup .btn-filter-opt');
+    siblings.forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+    currentSelectedGrade = gradeCode;
+};
+
+window.selectSubject = function(btnElement, subjectCode) {
+    const siblings = document.querySelectorAll('#subjectFilterGroup .btn-filter-opt');
+    siblings.forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+    currentSelectedSubject = subjectCode;
+};
+
+window.handlePlaceholderClick = function(levelNum) {
+    let gradeName = currentSelectedGrade === 'g1' ? '一年級' : currentSelectedGrade === 'g2' ? '二年級' : '三年級';
+    let subName = currentSelectedSubject === 'math' ? '數學' : currentSelectedSubject === 'eng' ? '英文' : '國語';
+
+    Swal.fire({
+        title: `🎯 ${gradeName} - ${subName}`,
+        text: `你點擊了第 ${levelNum} 關！本關卡題目內容 Winnie 老師正在全力調整中，敬請期待喔！✨`,
+        icon: 'info',
+        confirmButtonText: '好，我會認真準備！'
+    });
+};
