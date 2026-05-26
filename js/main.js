@@ -333,24 +333,7 @@ function renderMarketListUI(snapshot) {
     else { list.innerHTML = html; empty.style.display = 'none'; }
 }
 
-// === Auth 相關元素與事件處理綁定 ===
-const loginOverlay = document.getElementById('loginOverlay');
-const loadingMsg = document.getElementById('loadingMsg');
-const errorMsg = document.getElementById('loginError');
-
-function handleAuthError(error) {
-    if(loadingMsg) loadingMsg.style.display = 'none';
-    let msg = error.code;
-    if (msg === 'auth/invalid-email') msg = "Email 格式不正確";
-    else if (msg === 'auth/user-not-found' || msg === 'auth/wrong-password' || msg === 'auth/invalid-credential') msg = "帳號或密碼錯誤";
-    else if (msg === 'auth/email-already-in-use') msg = "此 Email 已經註冊過了";
-    else if (msg === 'auth/weak-password') msg = "密碼太弱 (至少需6位)";
-    else if (msg === 'auth/missing-password') msg = "請輸入密碼";
-    if(errorMsg) errorMsg.innerText = msg;
-    Swal.fire({ icon: 'error', title: '登入失敗', text: msg });
-}
-
-// 👑 關鍵修正：將 Auth 觸發功能直接繫結至 window 全域，徹底解決按鈕結冰沒反應的問題！
+// === Auth 核心繫結到 Window 確保能跨越邊界執行 ===
 window.handleLoginAction = function() {
     const email = document.getElementById('emailInput').value.trim(); 
     const password = document.getElementById('passwordInput').value;
@@ -378,20 +361,6 @@ window.handleGuestLoginAction = function() {
     if(loadingMsg) loadingMsg.style.display = 'block';
     signInAnonymously(auth).catch((error) => { handleAuthError(error); Swal.fire('注意', '請確認驗證功能開啟', 'warning'); });
 };
-
-// 幫 DOM 元素重新掛載監聽器（防線二）
-setTimeout(() => {
-    const btnL = document.getElementById('btnLogin'); if(btnL) btnL.onclick = window.handleLoginAction;
-    const btnR = document.getElementById('btnRegister'); if(btnR) btnR.onclick = window.handleRegisterAction;
-    const btnF = document.getElementById('btnForgotPassword'); if(btnF) btnF.onclick = window.handleForgotPasswordAction;
-    const btnG = document.getElementById('btnGuest'); if(btnG) btnG.onclick = window.handleGuestLoginAction;
-    const btnOut = document.getElementById('btnLogout'); if(btnOut) {
-        btnOut.onclick = function() {
-            Swal.fire({ title: '確定要登出嗎？', icon: 'question', showCancelButton: true, confirmButtonText: '登出', cancelButtonText: '取消' })
-                .then((result) => { if (result.isConfirmed) signOut(auth).then(() => { location.reload(); }); });
-        };
-    }
-}, 200);
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -653,7 +622,7 @@ window.fireConfetti = function() {};
 window.showAppGuide = function() {};
 window.showChangelog = function() {};
 
-// === 全域生命週期綁定 ===
+// === 全域生命週期與按鈕事件全繫結 ===
 window.switchChild = switchChild;
 window.switchTab = switchTab;
 window.useItem = useItem;
