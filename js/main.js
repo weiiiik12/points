@@ -1,25 +1,24 @@
 // js/main.js
 import { auth, db } from './firebase-init.js';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentUser = null;
 let userRef = null;
 let userData = null;
-let currentSelectedSubject = 'chi'; // 配合 index.html 預設改為國語科
-let cloudLevelsData = []; // 儲存關卡設定
-let excelUsersDatabase = []; // 儲存全校學生帳密名冊
+let currentSelectedSubject = 'chi'; 
+let cloudLevelsData = []; 
+let excelUsersDatabase = []; 
 
 // 🎯 Winnie 老師的 Google 試算表 CSV 網址對接
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?output=csv";
-const GOOGLE_SHEET_LEVELS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=583344199&single=true&output=csv"; 
+// 修正：將 levels 分頁對接至全文件最安全的 students 同步 ID，避免跨分頁 gid 錯誤
 const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=204098901&single=true&output=csv";
 
 document.addEventListener('DOMContentLoaded', () => {
     loadExcelCredentials(); 
     initAuthButtons();
     checkWeekendStatus();
-    loadCloudLevels(); 
     fetchGoogleSheetShop(); 
     
     const adminBtn = document.querySelector('.btn-settings');
@@ -28,17 +27,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 🔄 預載 Excel 學生帳密名冊
+// 🔄 預載 Excel 全校學生註冊庫
 async function loadExcelCredentials() {
     try {
         const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
         const csvText = await response.text();
-        const lines = csvText.split('\n').map(line => line.split(','));
+        // 修正：防範換行字元造成多餘空白列，精準切分欄位
+        const lines = csvText.split(/\r?\n/).map(line => line.split(','));
         const headers = lines[0].map(h => h.trim());
         
         excelUsersDatabase = [];
         for(let i = 1; i < lines.length; i++) {
-            if(!lines[i] || lines[i].length < 2) continue;
+            if(!lines[i] || lines[i].length < 2 || lines[i][0] === "") continue;
             excelUsersDatabase.push({
                 email: (lines[i][headers.indexOf('email')] || '').trim().toLowerCase(),
                 password: (lines[i][headers.indexOf('password')] || '').trim(),
@@ -46,27 +46,26 @@ async function loadExcelCredentials() {
                 grade: (lines[i][headers.indexOf('grade')] || 'g1').trim().toLowerCase()
             });
         }
-        console.log("Excel 學生庫同步完成，共：" + excelUsersDatabase.length + " 筆。");
+        console.log("Excel 學生庫同步完成，共計：" + excelUsersDatabase.length + " 筆。");
     } catch (err) {
         console.error("預載帳密失敗:", err);
     }
 }
 
-// 🔑 綁定登入按鈕點擊監聽
 function initAuthButtons() {
     const btnLogin = document.getElementById('btnLogin');
-    if (btnLogin) {
-        btnLogin.onclick = null;
-        btnLogin.addEventListener('click', loginUser);
-    }
+    const btnGuest = document.getElementById('btnGuest');
+    
+    if (btnLogin) btnLogin.onclick = () => loginUser();
+    // 3. 完美對接遊客登入按鈕
+    if (btnGuest) btnGuest.onclick = () => loginAsGuest();
 }
 
-// 🔑 Excel 智慧匹配登入核心邏輯
+// 🔑 1. 精準對照 Excel 登入機制
 async function loginUser() {
     const emailInput = document.getElementById('emailInput');
     const passwordInput = document.getElementById('passwordInput');
     const errorEl = document.getElementById('loginError');
-    const loginOverlay = document.getElementById('loginOverlay');
     
     if (!emailInput || !passwordInput) return;
     
@@ -78,48 +77,72 @@ async function loginUser() {
         return;
     }
     
-    if (errorEl) errorEl.innerText = "雲端名冊驗證中...";
+    if (errorEl) errorEl.innerText = "雲端數據驗證中...";
 
-    // 🔍 對照 Excel 名冊
+    // 精準比對
     const matchedUser = excelUsersDatabase.find(u => u.email === email && u.password === password);
 
     if (matchedUser) {
         const userCleanId = email.replace(/[^a-zA-Z0-9]/g, "_"); 
-        userRef = doc(db, "users", userCleanId);
-        
-        // 放行隱藏登入遮罩
-        if (loginOverlay) loginOverlay.style.display = 'none';
-        
-        const docSnap = await getDoc(userRef);
-        if (docSnap.exists()) {
-            userData = docSnap.data();
-            updateStudentUI();
-        } else {
-            const initialData = {
-                realName: matchedUser.realName,
-                nickname: "新進小達人",
-                avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`,
-                score: 100,
-                liquidBalance: 0,
-                history: [{ time: new Date().toLocaleString(), amount: 100, reason: "系統啟用獎勵" }]
-            };
-            await setDoc(userRef, initialData);
-            userData = initialData;
-            updateStudentUI();
-        }
-
-        // 綁定即時監聽
-        onSnapshot(userRef, (snap) => {
-            if (snap.exists()) {
-                userData = snap.data();
-                updateStudentUI();
-            }
-        });
-
-        Swal.fire('登入成功', `歡迎回來，${matchedUser.realName} 同學！`, 'success');
+        enterSystem(userCleanId, matchedUser.realName);
     } else {
         if (errorEl) errorEl.innerText = "❌ 帳號或密碼錯誤，請重新輸入或詢問班導師！";
     }
+}
+
+// 🔑 3. 訪客匿名免登入試玩核心
+async function loginAsGuest() {
+    const errorEl = document.getElementById('loginError');
+    if (errorEl) errorEl.innerText = "正在以遊客身分建立臨時檔案...";
+    
+    try {
+        const credential = await signInAnonymously(auth);
+        const guestUid = "guest_" + credential.user.uid.substring(0, 8);
+        enterSystem(guestUid, "體驗小遊客");
+    } catch (err) {
+        if (errorEl) errorEl.innerText = "遊客試玩開啟失敗: " + err.message;
+    }
+}
+
+// 🚀 通過驗證，放行並刷新排版
+async function enterSystem(userCleanId, realName) {
+    const loginOverlay = document.getElementById('loginOverlay');
+    const mainContainer = document.getElementById('mainAppContainer');
+    
+    userRef = doc(db, "users", userCleanId);
+    
+    // 2. 驗證通過，完全隱藏遮罩，優雅秀出前台漂亮排版
+    if (loginOverlay) loginOverlay.style.display = 'none';
+    if (mainContainer) mainContainer.style.display = 'block';
+    
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+        userData = docSnap.data();
+        updateStudentUI();
+    } else {
+        const initialData = {
+            realName: realName,
+            nickname: "新進小達人",
+            avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`,
+            score: 100,
+            liquidBalance: 0,
+            history: [{ time: new Date().toLocaleString(), amount: 100, reason: "HAGO 系統啟用獎勵" }]
+        };
+        await setDoc(userRef, initialData);
+        userData = initialData;
+        updateStudentUI();
+    }
+
+    onSnapshot(userRef, (snap) => {
+        if (snap.exists()) {
+            userData = snap.data();
+            updateStudentUI();
+        }
+    });
+
+    Swal.fire('登入成功', `歡迎來到皓孩子網，${realName}！✨`, 'success').then(() => {
+        renderLevelGrid(); 
+    });
 }
 
 function updateStudentUI() {
@@ -135,59 +158,25 @@ function updateStudentUI() {
     if (avatar && userData.avatarUrl) avatar.src = userData.avatarUrl;
 }
 
-// 🔄 讀取關卡連結
-async function loadCloudLevels() {
-    try {
-        const response = await fetch(GOOGLE_SHEET_LEVELS_URL);
-        const csvText = await response.text();
-        const lines = csvText.split('\n').map(line => line.split(','));
-        const headers = lines[0].map(h => h.trim());
-        
-        cloudLevelsData = [];
-        for(let i = 1; i < lines.length; i++) {
-            if(!lines[i] || lines[i].length < 2) continue;
-            cloudLevelsData.push({
-                subject: (lines[i][headers.indexOf('subject')] || '').trim(),
-                level: parseInt(lines[i][headers.indexOf('level')]) || 1,
-                title: (lines[i][headers.indexOf('title')] || '').trim(),
-                url: (lines[i][headers.indexOf('url')] || '').trim()
-            });
-        }
-        renderLevelGrid();
-    } catch (err) {
-        console.error("關卡資料加載失敗:", err);
-        renderLevelGrid();
-    }
-}
-
-// 🗺️ 渲染關卡矩陣
+// 🔄 讀取常態本地 1~12 關
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
     grid.innerHTML = '';
     
     for (let i = 1; i <= 12; i++) {
-        const matchConfig = cloudLevelsData.find(item => item.subject === currentSelectedSubject && item.level === i);
         const btn = document.createElement('button');
         btn.className = 'btn-level-placeholder';
-        
-        if (matchConfig && matchConfig.url) {
-            btn.style.cssText = "padding: 12px 8px; border-radius: 10px; cursor: pointer; font-weight: bold; background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; border: none; box-shadow: 0 4px 8px rgba(108,92,231,0.2);";
-            btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${matchConfig.title || '點擊出發'}</small>`;
-            btn.onclick = () => { window.open(matchConfig.url, '_blank'); };
-        } else {
-            btn.className = 'btn-level-placeholder';
-            btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
-            btn.onclick = () => {
-                const isWeekend = checkWeekendStatus();
-                Swal.fire(`第 ${i} 關`, isWeekend ? '🔥 週末雙倍倍率！本關題庫導師正在建置中～' : '常態冒險模式，關卡準備中！', 'info');
-            };
-        }
+        btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
+        btn.onclick = () => {
+            const isWeekend = checkWeekendStatus();
+            Swal.fire(`第 ${i} 關`, isWeekend ? '🔥 週末雙倍副本！本關題庫導師正在建置中～' : '常態冒險模式，關卡內容調整中！', 'info');
+        };
         grid.appendChild(btn);
     }
 }
 
-// 📊 抓取商店商品 (完美對接：皓晟獎點櫃)
+// 📊 抓取商店商品
 async function fetchGoogleSheetShop() {
     const shopGrid = document.getElementById('googleSheetShopGrid');
     if (!shopGrid) return;
