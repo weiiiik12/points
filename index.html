@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HAGO 好孩子全能獎勵系統 2.0</title>
+    <title>皓孩子網</title>
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="style.css">
@@ -12,8 +12,8 @@
 
 <div id="loginOverlay">
     <div class="login-card">
-        <h2 style="margin-top:0; color:#4a90e2;">🎒 HAGO 獎勵系統 2.0</h2>
-        <p style="color:#666; margin-bottom:20px; font-size:0.85rem;">請輸入 Winnie 老師發放的「帳號與密碼」</p>
+        <h2 style="margin-top:0; color:#4a90e2;">🎒皓孩子系統 2.0</h2>
+        <p style="color:#666; margin-bottom:20px; font-size:0.85rem;">請輸入帳號與密碼</p>
         <input type="email" id="emailInput" class="login-input" placeholder="學號或電子信箱 (Email)">
         <input type="password" id="passwordInput" class="login-input" placeholder="請輸入登入密碼">
         <div class="btn-group-login">
@@ -45,10 +45,10 @@
 
 <div class="nav">
     <button class="nav-btn active" onclick="switchTab('tab-quiz')">🎯 挑戰小學堂</button>
-    <button class="nav-btn" onclick="switchTab('tab-shop')">🎁 盲盒商店</button>
-    <button class="nav-btn" onclick="switchTab('tab-bank')">🏦 智慧定存</button>
-    <button class="nav-btn" onclick="switchTab('tab-forum')">👥 班級廣場</button>
-    <button class="nav-btn" onclick="switchTab('tab-market')">⚖️ 交易行(10%)</button>
+    <button class="nav-btn" onclick="switchTab('tab-shop')">🎁 皓商店</button>
+    <button class="nav-btn" onclick="switchTab('tab-bank')">🏦 皓銀行</button>
+    <button class="nav-btn" onclick="switchTab('tab-forum')">👥 校園廣場</button>
+    <button class="nav-btn" onclick="switchTab('tab-market')">⚖️ 交易所</button>
     <button class="nav-btn" onclick="switchTab('tab-achieve')">🏆 榮譽成就</button>
 </div>
 
@@ -108,17 +108,17 @@
         <h3 class="school-title" style="color:#ff9f43;">🎲 幸運盲盒抽獎</h3>
         <button class="big-btn" style="background: linear-gradient(135deg, #ff9f43 0%, #ee5253 100%); margin: 10px 0;" onclick="window.startGacha && window.startGacha()">啟動幸運抽獎 (消耗 50 點)</button>
         
-        <h3 class="school-title" style="color:#2d3436; margin-top:25px; font-size:1.1rem;">🏪 HAGO 蝦皮風直購櫥窗</h3>
+        <h3 class="school-title" style="color:#2d3436; margin-top:25px; font-size:1.1rem;">🏪 皓晟獎點櫃</h3>
         <div id="googleSheetShopGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px;"></div>
         
-        <h3 class="school-title" style="color:#636e72; margin-top:30px;">🎒 我的背包 (已兌換禮物)</h3>
+        <h3 class="school-title" style="color:#636e72; margin-top:30px;">🎒 我的背包</h3>
         <div id="inventoryContainer"></div>
     </div>
 </div>
 
 <div id="tab-bank" class="section">
     <div class="bank-card">
-        <div class="bank-rate">🏦 智慧理財銀行</div>
+        <div class="bank-rate">🏦 皓銀行 </div>
         <div class="bank-est">💰 活存點數載入中...</div>
     </div>
 </div>
