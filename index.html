@@ -8,26 +8,58 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* 確保主程式載入前，前台應用內容絕對不會搶先露出來 */
+        /* 🌟 1. 確保登入前，主程式絕對隱藏 */
         #mainAppContainer { display: none; }
+
+        /* 🌟 2. 完美還原妳最愛的絕美登入卡片質感 */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #f8f9fa; /* 乾淨的高級灰白底色 */
+            z-index: 9999; display: flex; justify-content: center; align-items: center;
+        }
+        .login-card {
+            background: white; padding: 40px 30px; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 90%; max-width: 380px; text-align: center;
+        }
+        .login-card h2 { color: #4a90e2; margin-top: 0; margin-bottom: 10px; font-size: 1.8rem; font-weight: 800; }
+        .login-card p { color: #666; font-size: 0.9rem; margin-bottom: 25px; }
+        .login-input {
+            width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #e2e8f0;
+            border-radius: 10px; font-size: 1rem; box-sizing: border-box; outline: none; transition: 0.2s;
+        }
+        .login-input:focus { border-color: #4a90e2; box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2); }
+        .btn-group-login { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-login { flex: 1; background: #4a90e2; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn-register { flex: 1; background: #00b894; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn-forgot { background: none; border: none; color: #888; font-size: 0.85rem; cursor: pointer; text-decoration: underline; margin-bottom: 15px; display: block; width: 100%; text-align: center; }
+        .btn-guest { width: 100%; background: #b2bec3; color: white; border: none; padding: 12px; border-radius: 25px; cursor: pointer; font-weight: bold; font-size: 0.95rem; margin-top: 5px; }
     </style>
 </head>
 <body>
 
+<!-- 🔑 絕美的登入視窗 -->
 <div id="loginOverlay">
     <div class="login-card">
-        <h2 style="margin-top:0; color:#4a90e2;">🎒 皓孩子系統 2.0</h2>
-        <p style="color:#666; margin-bottom:20px; font-size:0.85rem;">請輸入 Winnie 老師發放的「帳號與密碼」</p>
-        <input type="email" id="emailInput" class="login-input" placeholder="學號或電子信箱 (Email)">
-        <input type="password" id="passwordInput" class="login-input" placeholder="請輸入登入密碼">
+        <h2>皓孩子獎勵 App</h2>
+        <p>請登入以同步雲端資料</p>
+        <input type="email" id="emailInput" class="login-input" placeholder="電子信箱 (Email)">
+        <input type="password" id="passwordInput" class="login-input" placeholder="密碼 (至少6位數)">
+        
         <div class="btn-group-login">
-            <button id="btnLogin" class="btn-login" style="width: 100%;">驗證身分並登入</button>
+            <button id="btnLogin" class="btn-login">登入</button>
+            <button id="btnRegister" class="btn-register" onclick="Swal.fire('提示', '請直接使用老師派發的帳號登入喔！', 'info')">註冊新帳號</button>
         </div>
-        <button id="btnGuest" class="btn-guest" style="margin-top: 15px;">👻 我是遊客 (免登入試玩)</button>
-        <p id="loginError" style="color:red; font-size:0.8rem; margin-top:10px;"></p>
+        
+        <button class="btn-forgot" onclick="Swal.fire('提示', '忘記密碼請直接詢問 Winnie 老師喔！', 'info')">忘記密碼？</button>
+        
+        <!-- 完美保留的訪客按鈕 -->
+        <button id="btnGuest" class="btn-guest">👻 我是遊客 (免登入試玩)</button>
+        
+        <p id="loginError" style="color:#e74c3c; font-size:0.85rem; margin-top:15px; font-weight:bold;"></p>
     </div>
 </div>
 
+<!-- 📦 將前台所有內容包在這個大箱子裡，登入成功前絕對隱藏 -->
 <div id="mainAppContainer">
 
     <div class="user-bar">
@@ -59,11 +91,11 @@
         <button class="nav-btn" onclick="switchTab('tab-achieve')">🏆 榮譽成就</button>
     </div>
 
+    <!-- === 挑戰小學堂分頁 === -->
     <div id="tab-quiz" class="section active">
         <div class="school-card-box" style="border-left: 5px solid #6c5ce7;">
             <h3 class="school-title" style="color:#6c5ce7;">⚔️ 知識王大冒險 (全科挑戰)</h3>
             <p class="school-desc">選擇想挑戰的科目，常態破關賺取海量點數獎勵！</p>
-            
             <div class="filter-group" style="margin-bottom: 15px;">
                 <div class="filter-row">
                     <span class="filter-label">選擇科目：</span>
@@ -76,7 +108,6 @@
                     </div>
                 </div>
             </div>
-
             <div style="margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
                 <div style="font-size: 0.85rem; color: #718096; margin-bottom: 10px; font-weight: bold;">🗺️ 冒險關卡地圖：</div>
                 <div class="level-btn-grid" id="quizLevelGrid"></div>
@@ -100,6 +131,7 @@
         </div>
     </div>
 
+    <!-- === 皓商店分頁 === -->
     <div id="tab-shop" class="section">
         <div class="school-card-box" style="border-left: 5px solid #4a90e2; background: #f0f7ff;">
             <h3 class="school-title" style="color:#4a90e2;">🎟️ 老師獎勵兌換碼</h3>
@@ -112,45 +144,29 @@
         <div class="school-card-box" style="border-left: 5px solid #ff9f43;">
             <h3 class="school-title" style="color:#ff9f43;">🎲 幸運盲盒抽獎</h3>
             <button class="big-btn" style="background: linear-gradient(135deg, #ff9f43 0%, #ee5253 100%); margin: 10px 0;" onclick="window.startGacha && window.startGacha()">啟動幸運抽獎 (消耗 50 點)</button>
-            
             <h3 class="school-title" style="color:#2d3436; margin-top:25px; font-size:1.1rem;">🏪 皓晟獎點櫃</h3>
             <div id="googleSheetShopGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px;"></div>
-            
             <h3 class="school-title" style="color:#636e72; margin-top:30px;">🎒 我的背包</h3>
             <div id="inventoryContainer"></div>
         </div>
     </div>
 
+    <!-- === 皓銀行、廣場、交易所、成就 (保留結構) === -->
     <div id="tab-bank" class="section">
-        <div class="bank-card">
-            <div class="bank-rate">🏦 皓銀行 </div>
-            <div class="bank-est">💰 活存點數載入中...</div>
-        </div>
+        <div class="bank-card"><div class="bank-rate">🏦 皓銀行</div><div class="bank-est">💰 活存點數載入中...</div></div>
     </div>
-
     <div id="tab-forum" class="section">
-        <div class="social-header">
-            <div class="post-input-container">
-                <input type="text" id="postInput" class="post-input" placeholder="想跟全班同學或導師說什麼嗎？">
-                <button class="btn-post" onclick="submitPost()">發送</button>
-            </div>
-        </div>
+        <div class="social-header"><div class="post-input-container"><input type="text" id="postInput" class="post-input" placeholder="想跟全班同學或導師說什麼嗎？"><button class="btn-post" onclick="submitPost()">發送</button></div></div>
         <div id="postList"></div>
     </div>
-
     <div id="tab-market" class="section">
-        <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #d35400; font-size: 0.9rem; font-weight: bold;">
-            ⚠️ 注意：物品交易行拍賣成功後，系統將自動扣除 10% 的銀行手續費！
-        </div>
+        <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #d35400; font-size: 0.9rem; font-weight: bold;">⚠️ 拍賣成功後，系統將自動扣除 10% 手續費！</div>
         <div id="marketList"></div>
     </div>
-
-    <div id="tab-achieve" class="section">
-        <div id="achievementContainer"></div>
-    </div>
+    <div id="tab-achieve" class="section"><div id="achievementContainer"></div></div>
 
     <footer class="admin-footer" style="margin-top: 40px; text-align: center; padding-bottom: 20px;">
-        <button class="btn-settings" style="background: #2c3e50; color: white; border: none; padding: 10px 24px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 1rem; width: auto; display: inline-block;">⚙️ 進入管理後台</button>
+        <button class="btn-settings" style="background: #2c3e50; color: white; border: none; padding: 10px 24px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 1rem;">⚙️ 進入管理後台</button>
     </footer>
 
 </div>
