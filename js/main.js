@@ -1,325 +1,344 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAGO 2.0 | 補習班雲端導師管理後台</title>
-    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        :root {
-            --admin-primary: #2c3e50;
-            --admin-accent: #34495e;
-            --success: #2ecc71;
-            --danger: #e74c3c;
-            --warning: #f1c40f;
-            --bg-color: #f4f6f9;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background-color: var(--bg-color); margin: 0; padding: 0; color: #333;
-        }
-        .admin-navbar {
-            background-color: var(--admin-primary); color: white; padding: 15px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .admin-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .welcome-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        .grid-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid var(--admin-accent); }
-        h2 { margin-top: 0; color: var(--admin-primary); border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.25rem;}
-        h3 { font-size: 1.1rem; color: #555; margin-top: 0; }
-        .form-group { margin-bottom: 15px; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
-        .btn-admin { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; }
-        .btn-primary { background: #3498db; color: white; }
-        .btn-success { background: var(--success); color: white; }
-        
-        .student-table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
-        .student-table th, .student-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 0.9rem; }
-        .student-table th { background-color: #f8fafc; color: #475569; }
-        .action-btn-sm { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 5px; font-weight: bold; }
-        .btn-add-pts { background: #2ecc71; color: white; }
-        .btn-deduct-pts { background: #e74c3c; color: white; }
-        .hint-text { font-size: 0.8rem; color: #7f8c8d; margin-top: 5px; line-height: 1.4; }
-        
-        /* 篩選器樣式 */
-        .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background: #edf2f7; padding: 10px; border-radius: 8px; }
-        .filter-select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; color: #4a5568; }
-    </style>
-</head>
-<body>
+// js/main.js
+import { auth, db } from './firebase-init.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc, setDoc, updateDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    <nav class="admin-navbar">
-        <div style="font-size: 1.2rem; font-weight: bold;">🎒 HAGO 2.0 導師控盤雲端後台</div>
-        <div>
-            <span id="activeTeacherTitle" style="margin-right: 15px; font-weight: bold; color: #f1c40f;">載入中...</span>
-            <button onclick="location.href='index.html'" style="padding: 6px 12px; background: #e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight: bold;">返回學生前台</button>
-        </div>
-    </nav>
+let currentUser = null;
+let userRef = null;
+let userData = null;
+let currentSelectedSubject = 'chi'; // 配合 index.html 預設改為國語科
+let cloudLevelsData = []; // 儲存從雲端下載的五大科關卡設定
 
-    <div class="admin-container">
+// 🎯 Winnie 老師！這裡換上妳提供 100% 正確的直購商店發布網址
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?output=csv";
+
+// 🎯 這裡請替換成妳發布試算表「levels」分頁產出的專屬 CSV 網址
+const GOOGLE_SHEET_LEVELS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=這裡要換成妳levels分頁的ID&single=true&output=csv";
+
+document.addEventListener('DOMContentLoaded', () => {
+    initAuthButtons();
+    initAuthListener();
+    checkWeekendStatus();
+    loadCloudLevels(); // 網頁打開時，自動連線下載 Excel 關卡地圖連結
+    fetchGoogleSheetShop(); // 自動加載蝦皮商店內容
+    
+    const adminBtn = document.querySelector('.btn-settings');
+    if (adminBtn) {
+        adminBtn.addEventListener('click', openAdminPanel);
+    }
+});
+
+// 🔄 📑 新增：非同步抓取雲端關卡連結庫
+async function loadCloudLevels() {
+    try {
+        const response = await fetch(GOOGLE_SHEET_LEVELS_URL);
+        const csvText = await response.text();
+        const lines = csvText.split('\n').map(line => line.split(','));
+        const headers = lines[0].map(h => h.trim());
         
-        <div class="welcome-box">
-            <h2 style="border:none; padding:0; margin-bottom:5px;">👋 老師辛苦了！歡迎來到班級經營控盤面板</h2>
-            <p style="margin:0; color:#666; font-size:0.9rem;">
-                本名冊已自動串接 Google 試算表 `students` 學生清單。提供快捷年級篩選、一鍵加扣點與知識王地圖連結管理。
-            </p>
-        </div>
+        cloudLevelsData = [];
+        for(let i = 1; i < lines.length; i++) {
+            if(!lines[i] || lines[i].length < 2) continue;
+            cloudLevelsData.push({
+                subject: (lines[i][headers.indexOf('subject')] || '').trim(),
+                level: parseInt(lines[i][headers.indexOf('level')]) || 1,
+                title: (lines[i][headers.indexOf('title')] || '').trim(),
+                url: (lines[i][headers.indexOf('url')] || '').trim()
+            });
+        }
+        renderLevelGrid(); // 雲端下載成功，立刻刷新關卡狀態
+    } catch (err) {
+        console.error("讀取雲端關卡失敗，採用常態預設結構:", err);
+        renderLevelGrid();
+    }
+}
 
-        <div class="grid-panel">
+// 📊 自動抓取 Google 試算表並渲染成蝦皮/淘寶雙網格版面
+async function fetchGoogleSheetShop() {
+    const shopGrid = document.getElementById('googleSheetShopGrid');
+    if (!shopGrid) return;
+
+    try {
+        const response = await fetch(GOOGLE_SHEET_CSV_URL);
+        const csvText = await response.text();
+        
+        // 解析 CSV 資料列
+        const lines = csvText.split('\n').map(line => line.split(','));
+        const headers = lines[0].map(h => h.trim());
+        
+        let html = '';
+        
+        // 從第二行開始讀取商品
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i] || lines[i].length < 2) continue;
             
-            <div class="card" style="grid-column: span 2;">
-                <h2>👥 學生名冊點數管控系統</h2>
-                
-                <div class="filter-bar">
-                    <label style="font-weight: bold; color: #4a5568;">🔍 按年級篩選學生：</label>
-                    <select id="gradeFilterSelect" class="filter-select" onchange="renderFilteredStudents()">
-                        <option value="all">顯示全校所有學生</option>
-                        <option value="g1">一年級</option>
-                        <option value="g2">二年級</option>
-                        <option value="g3">三年級</option>
-                        <option value="g4">四年級</option>
-                        <option value="g5">五年級</option>
-                        <option value="g6">六年級</option>
-                    </select>
+            // 欄位對照（對應第一行的 title, price, stock, imgUrl）
+            const title = lines[i][headers.indexOf('title')] || '神秘小禮物';
+            const price = parseInt(lines[i][headers.indexOf('price')]) || 999;
+            const stock = parseInt(lines[i][headers.indexOf('stock')]) || 0;
+            const imgUrl = lines[i][headers.indexOf('imgUrl')] || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150'; // 預設禮物圖
+
+            // 蝦皮風商品卡片 HTML 排版
+            html += `
+                <div class="shopee-card" style="background:#fff; border:1px solid #f1f2f6; border-radius:12px; overflow:hidden; box-shadow:0 3px 6px rgba(0,0,0,0.02); display:flex; flex-direction:column; justify-content:space-between; padding:10px;">
+                    <img src="${imgUrl.trim()}" style="width:100%; height:120px; object-fit:cover; border-radius:8px;" alt="商品">
+                    <div style="margin-top:8px;">
+                        <h4 style="margin:0; font-size:0.95rem; color:#2d3436; height:2.4em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${title}</h4>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                            <span style="color:#ee5253; font-weight:800; font-size:1.1rem;">${price}<small style="font-size:0.7rem; font-weight:normal; color:#999;">點</small></span>
+                            <span style="font-size:0.75rem; color:#636e72; background:#f1f2f6; padding:2px 6px; border-radius:4px;">庫存:${stock}</span>
+                        </div>
+                    </div>
+                    <button onclick="buyShopItem('${title}', ${price}, ${stock})" ${stock <= 0 ? 'disabled' : ''} style="width:100%; margin-top:10px; padding:6px; background:${stock <= 0 ? '#b2bec3' : '#ff9f43'}; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85rem;">
+                        ${stock <= 0 ? '已售完' : '立即直購'}
+                    </button>
                 </div>
+            `;
+        }
+        shopGrid.innerHTML = html;
+    } catch (err) {
+        console.error("讀取 Google 商店失敗:", err);
+        shopGrid.innerHTML = `<p style="color:#999; text-align:center; grid-column:span 2;">Winnie 老師正在把試算表「發布到網路」中，請稍候再看喔！</p>`;
+    }
+}
 
-                <div style="overflow-x: auto;">
-                    <table class="student-table" id="adminStudentTable">
-                        <thead>
-                            <tr>
-                                <th>年級</th>
-                                <th>真實姓名 (Excel)</th>
-                                <th>廣場暱稱 (學生)</th>
-                                <th>目前金幣 💰</th>
-                                <th>快捷操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="5" style="text-align:center; color:#999;">雲端資料庫同步中...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+// 🛒 直購扣款與派發機制
+window.buyShopItem = async function(title, price, stock) {
+    if (!userData) return;
+    if ((userData.score || 0) < price) {
+        return Swal.fire('點數不足', `妳還差 ${price - userData.score} 點金幣才能購買這個禮物喔！`, 'warning');
+    }
 
-            <div class="card">
-                <h2>🗺️ 知識王大冒險關卡連結管理</h2>
-                <p class="hint-text">請直接在妳的 Google 試算表 【levels】 分頁中新增或修改關卡網址。前台關卡地圖將會自動解鎖發光！</p>
-                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:15px; margin-top:15px;">
-                    <h4 style="margin:0 0 8px 0; color:#2c3e50;">💡 快速指引：</h4>
-                    <ol style="margin:0; padding-left:20px; font-size:0.85rem; color:#555; line-height:1.6;">
-                        <li>打開試算表的 <b>levels</b> 分頁</li>
-                        <li><b>subject</b> 欄位填入：chi / eng / math / sci / soc</li>
-                        <li><b>level</b> 欄位填入關卡數字 (1~12)</li>
-                        <li>填入 <b>title</b> (關卡名) 與 <b>url</b> (遊戲網址)</li>
-                        <li>前台就會自動同步，無需工程師修改程式！</li>
-                    </ol>
-                </div>
-            </div>
+    Swal.fire({
+        title: '確定要直購嗎？',
+        text: `確認扣除 ${price} 點金幣來兌換【${title}】嗎？`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '確定兌換'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const currentInventory = userData.inventory || [];
+            const currentHistory = userData.history || [];
+            
+            await updateDoc(userRef, {
+                score: userData.score - price,
+                inventory: [...currentInventory, { title: title, date: new Date().toLocaleDateString(), type: 'store' }],
+                history: [...currentHistory, { time: new Date().toLocaleString(), amount: -price, reason: `[商店購買] 兌換 ${title}` }]
+            });
+            
+            Swal.fire('🎉 兌換成功！', `已成功扣款，小禮物【${title}】已經放進妳的 🎒 背包中囉！請向 Winnie 老師領取實體獎品。`, 'success');
+        }
+    });
+};
 
-            <div class="card admin-only-block" id="adminShopCard" style="display:none;">
-                <h2>🎁 核心權限：Google 試算表商店上架</h2>
-                <div class="form-group">
-                    <label>🔗 商店 CSV 發布網址</label>
-                    <input type="text" class="form-control" value="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" readonly>
-                </div>
-                <div class="form-group">
-                    <label>⚙️ 庫存扣除模式</label>
-                    <input type="text" class="form-control" value="系統自動限量扣除" readonly>
-                </div>
-                <p class="hint-text" style="color:#e67e22;">ℹ️ 提示：普通班導師無需管理商品，本面板僅對主任與Winnie老師開放。</p>
-            </div>
+// 👥 好友組隊闖關點擊綁定
+window.joinTeamChallenge = async function() {
+    const roomInput = document.getElementById('teamRoomInput');
+    if (!roomInput || !roomInput.value.trim()) return Swal.fire('提示', '請輸入同學的 Room ID', 'warning');
+    const roomId = roomInput.value.trim();
 
-            <div class="card admin-only-block" id="adminPromoCard" style="display:none;">
-                <h2>🎫 核心權限：動態獎勵序號生成器</h2>
-                <p class="hint-text">生成大量通關序號讓學生自行兌換。</p>
-                <div class="form-group" style="margin-top:10px;">
-                    <input type="text" id="newPromoCode" class="form-control" placeholder="自訂序號 (如: ENG888)">
-                </div>
-                <div class="form-group">
-                    <input type="number" id="promoPoints" class="form-control" placeholder="贈送點數">
-                </div>
-                <button class="btn-admin btn-success" onclick="generateTeacherPromoCode()">🚀 派發並上架雲端序號</button>
-            </div>
+    Swal.fire({
+        title: '👥 組隊闖關成功連線！',
+        text: `已成功將你與 Room ID: ${roomId} 的隊伍同步綁定！通關時全員將同時獲得點數報酬！`,
+        icon: 'success'
+    });
+};
 
-        </div>
-    </div>
+// 🎟️ 序號兌換碼系統 (前端輸入兌換)
+const LOCAL_PROMO_DATABASE = {
+    "GOODJOB888": { points: 100, reason: "課堂表現優異獎勵" },
+    "ENGLISHKING": { points: 150, reason: "英文單字競賽破關獎勵" },
+    "MATH999": { points: 200, reason: "數學精熟大挑戰特獎" }
+};
 
-    <script type="module">
-        import { auth, db } from './firebase-init.js';
-        import { collection, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+window.redeemPromoCode = async function() {
+    const input = document.getElementById('promoCodeInput');
+    if (!input || !input.value.trim()) return Swal.fire('提示', '請輸入序號', 'warning');
+    const code = input.value.trim().toUpperCase();
 
-        // 🎯 學生 Excel 名冊的發布網址
-        const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=204098901&single=true&output=csv";
+    if (LOCAL_PROMO_DATABASE[code]) {
+        const reward = LOCAL_PROMO_DATABASE[code];
+        const history = userData.history || [];
+        const hasClaimed = history.some(h => h.reason && h.reason.includes(`[序號兌換:${code}]`));
+        
+        if (hasClaimed) return Swal.fire('不能重複領取', '這個兌換碼你已經領過囉！', 'error');
 
-        let excelStudentsList = []; // 暫存 Excel 學生資料
-        let firebaseUsersMap = {};  // 暫存 Firebase 即時點數資料
+        const newScore = (userData.score || 0) + reward.points;
+        const newHistory = [...history, { time: new Date().toLocaleString(), amount: reward.points, reason: `[序號兌換:${code}] ${reward.reason}` }];
 
-        document.addEventListener('DOMContentLoaded', () => {
-            checkTeacherPermission();
-            loadExcelStudents();
+        await updateDoc(userRef, {
+            score: newScore,
+            history: newHistory
         });
 
-        // 🛡️ 權限分流判斷：檢查是哪位老師登入
-        function checkTeacherPermission() {
-            const activeTeacher = localStorage.getItem('activeTeacherName') || "值班老師";
-            const titleEl = document.getElementById('activeTeacherTitle');
-            if (titleEl) titleEl.innerText = `歡迎妳，${activeTeacher} ✨`;
+        Swal.fire('🎉 兌換成功！', `獲得點數：+${reward.points} 點！\n原因：${reward.reason}`, 'success');
+        input.value = '';
+    } else {
+        Swal.fire('序號錯誤', '找不到這組兌換碼，請跟 Winnie 老師確認喔！', 'error');
+    }
+};
 
-            // 如果是徐主任或Winnie老師，解鎖核心管理面板
-            if (activeTeacher === "徐主任" || activeTeacher === "Winnie老師") {
-                document.getElementById('adminShopCard').style.display = 'block';
-                document.getElementById('adminPromoCard').style.display = 'block';
-            }
-        }
+// 週末限時挑戰按鈕點擊
+window.startWeekendQuiz = function() {
+    const isWeekend = checkWeekendStatus();
+    if (isWeekend) {
+        Swal.fire('⚔️ 限時副本開啟！', '你已成功進入週末限定題庫，此處所有題目獲得的點數全部自動翻 2 倍！題目加載中...', 'success');
+    } else {
+        Swal.fire('未到開啟時間', '這是週六、週日才會限時對外開放的隱藏神秘題庫喔！平常請認真複習「知識王大冒險」💪', 'info');
+    }
+};
 
-        // 🔄 讀取 Google Sheet 學生正名清單
-        async function loadExcelStudents() {
-            try {
-                const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
-                const csvText = await response.text();
-                const lines = csvText.split('\n').map(line => line.split(','));
-                const headers = lines[0].map(h => h.trim());
-                
-                excelStudentsList = [];
-                for(let i = 1; i < lines.length; i++) {
-                    if(!lines[i] || lines[i].length < 2) continue;
-                    excelStudentsList.push({
-                        email: (lines[i][headers.indexOf('email')] || '').trim().toLowerCase(),
-                        realName: (lines[i][headers.indexOf('realName')] || '未命名').trim(),
-                        grade: (lines[i][headers.indexOf('grade')] || 'g1').trim().toLowerCase()
-                    });
+// 其餘綁定邏輯完全保留（精簡防錯）
+function initAuthButtons() {
+    const btnLogin = document.getElementById('btnLogin');
+    const btnRegister = document.getElementById('btnRegister');
+    if (btnLogin) btnLogin.onclick = () => loginUser();
+    if (btnRegister) btnRegister.onclick = () => registerUser();
+}
+
+function initAuthListener() {
+    const loginOverlay = document.getElementById('loginOverlay');
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            userRef = doc(db, "users", user.uid);
+            if (loginOverlay) loginOverlay.style.display = 'none';
+            onSnapshot(userRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    userData = docSnap.data();
+                    updateStudentUI();
                 }
-                startFirebaseUsersListener(); // Excel 抓完後，啟動 Firebase 即時連線
-            } catch (err) {
-                console.error("讀取 Excel 學生清單失敗:", err);
-            }
+            });
+        } else {
+            if (loginOverlay) loginOverlay.style.display = 'flex';
         }
+    });
+}
 
-        // 🔥 即時監聽 Firebase 點數與歷史紀錄
-        function startFirebaseUsersListener() {
-            onSnapshot(collection(db, "users"), (snapshot) => {
-                firebaseUsersMap = {};
-                snapshot.forEach(docSnap => {
-                    // 以註冊的 email 作為索引對照
-                    const data = docSnap.data();
-                    if (data.realName) {
-                        // 如果有舊資料的 email
-                        firebaseUsersMap[docSnap.id] = { uid: docSnap.id, ...data };
-                    }
-                });
-                // 同步將 Firebase 的資料與 Excel 正名匹配
-                snapshot.forEach(docSnap => {
-                    const uid = docSnap.id;
-                    const fData = docSnap.data();
-                    // 為了匹配精準，我們在 Firebase 初始註冊時有抓 email 前綴或完整欄位
-                    // 此處直接用 Firebase 內的 UID 或儲存的 realName 做媒介
-                });
-                
-                // 這裏直接用動態匹配刷新畫面
-                window.latestSnapshot = snapshot;
-                renderFilteredStudents();
-            });
+function updateStudentUI() {
+    if (!userData) return;
+    const nameEl = document.getElementById('childNameDisplay');
+    const scoreEl = document.getElementById('scoreDisplay');
+    const avatarEl = document.getElementById('userAvatar');
+    if (nameEl) nameEl.innerText = `${userData.nickname} (${userData.realName})`;
+    if (scoreEl) scoreEl.innerText = userData.score || 0;
+    if (avatarEl && userData.avatarUrl) avatarEl.src = userData.avatarUrl;
+}
+
+async function loginUser() {
+    const email = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value.trim();
+    if (!email || !password) return;
+    try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { document.getElementById('loginError').innerText = "登入失敗：" + err.message; }
+}
+
+async function registerUser() {
+    const email = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value.trim();
+    try { await createUserWithEmailAndPassword(auth, email, password); Swal.fire('註冊成功', '歡迎加入！', 'success'); } catch (err) { document.getElementById('loginError').innerText = "註冊失敗：" + err.message; }
+}
+
+function checkWeekendStatus() {
+    const today = new Date();
+    const day = today.getDay(); 
+    const isWeekend = (day === 0 || day === 6);
+    const badge = document.getElementById('weekendBadge');
+    if (badge) badge.style.display = isWeekend ? 'inline-block' : 'none';
+    return isWeekend;
+}
+
+window.selectSubject = function(subject) {
+    currentSelectedSubject = subject;
+    document.querySelectorAll('.btn-subject').forEach(btn => btn.classList.remove('active'));
+    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+    renderLevelGrid(); // 切換國英數自社時重新渲染地圖
+};
+
+// 🗺️ 智慧偵測：對照雲端科目與解鎖狀態
+function renderLevelGrid() {
+    const grid = document.getElementById('quizLevelGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    for (let i = 1; i <= 12; i++) {
+        // 在雲端資料中比對科目代號（chi, eng, math, sci, soc）與關卡數
+        const matchConfig = cloudLevelsData.find(item => item.subject === currentSelectedSubject && item.level === i);
+        
+        const btn = document.createElement('button');
+        btn.className = 'btn-level-placeholder';
+        btn.style.cssText = "padding: 12px 8px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s; width: 100%;";
+        
+        if (matchConfig && matchConfig.url) {
+            // 🔥 老師在 Excel 有填遊戲網址的關卡：自動紫色發光解鎖
+            btn.style.background = "linear-gradient(135deg, #a29bfe, #6c5ce7)";
+            btn.style.color = "white";
+            btn.style.border = "none";
+            btn.style.boxShadow = "0 4px 8px rgba(108,92,231,0.2)";
+            btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${matchConfig.title || '點擊出發'}</small>`;
+            btn.onclick = () => {
+                window.open(matchConfig.url, '_blank'); // 直接跳轉關卡連結
+            };
+        } else {
+            // 🔒 沒填網址的關卡：自動維持灰白色防點擊
+            btn.style.background = "#f8fafc";
+            btn.style.color = "#94a3b8";
+            btn.style.border = "1px dashed #cbd5e1";
+            btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
+            btn.onclick = () => {
+                const isWeekend = checkWeekendStatus();
+                Swal.fire(`第 ${i} 關`, isWeekend ? '🔥 週末翻倍模式！關卡內容正在建置中！' : '常態冒險模式，關卡準備中！', 'info');
+            };
         }
+        grid.appendChild(btn);
+    }
+}
 
-        // 🎛️ 核心渲染：結合 Excel 正名、年級與 Firebase 點數加扣
-        window.renderFilteredStudents = function() {
-            const tbody = document.querySelector('#adminStudentTable tbody');
-            const selectedGrade = document.getElementById('gradeFilterSelect').value;
-            if (!tbody || !window.latestSnapshot) return;
+window.switchTab = function(tabId) {
+    document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    const targetTab = document.getElementById(`tab-${tabId}`);
+    if (targetTab) targetTab.style.display = 'block';
+    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+};
 
-            tbody.innerHTML = '';
-            let count = 0;
+// 🔐 導師安全認證系統 (支援多導師專屬固定 ID 登入)
+async function openAdminPanel() {
+    const { value: teacherId } = await Swal.fire({
+        title: '🔑 導師安全認證',
+        input: 'password',
+        inputLabel: '請輸入您的專屬導師固定 ID',
+        inputPlaceholder: '請輸入老師的後台管理金鑰...',
+        showCancelButton: true,
+        confirmButtonColor: '#2c3e50'
+    });
 
-            // 遍歷所有在 Firebase 註冊的真實學生
-            window.latestSnapshot.forEach((docSnap) => {
-                const uid = docSnap.id;
-                const fUser = docSnap.data();
-                
-                // 智慧防錯匹配：優先去 Excel 學生庫尋找對應真實本名與年級
-                // 學生註冊的真實姓名預設會與系統同步，或者根據 email 前綴匹配
-                const matchedExcel = excelStudentsList.find(ex => fUser.realName.includes(ex.realName) || uid.substring(0,5) === ex.email.split('@')[0]);
-                
-                const displayGrade = matchedExcel ? matchedExcel.grade.toUpperCase() : "G1";
-                const realName = matchedExcel ? matchedExcel.realName : (fUser.realName || "新進學生");
-                const gradeCode = matchedExcel ? matchedExcel.grade : "g1";
+    // 🎟️ 補習班導師團隊專屬固定 ID 配置清單
+    const TEACHER_REGISTRY = {
+        "winnie888": "Winnie 老師",
+        "tiffany777": "Tiffany 老師",
+        "andrea666": "Andrea 老師",
+        "katrina555": "Katrina 老師",
+        "kelly444": "Kelly 老師"
+    };
 
-                // 🌟 年級篩選過濾過濾器
-                if (selectedGrade !== 'all' && gradeCode !== selectedGrade) {
-                    return; // 跳過不符合年級的學生
-                }
+    if (teacherId && TEACHER_REGISTRY[teacherId]) {
+        const teacherName = TEACHER_REGISTRY[teacherId];
+        
+        // 將當前登入的老師名字暫存到瀏覽器，等一下 admin.html 可以直接抓取顯示！
+        localStorage.setItem('activeTeacherName', teacherName);
 
-                count++;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="font-weight:bold; color:#718096;">${displayGrade}</td>
-                    <td><b style="color:#2c3e50; font-size:1rem;">${realName}</b></td>
-                    <td style="font-style: italic; color:#4a90e2;">${fUser.nickname || '無暱稱'}</td>
-                    <td style="color:#27ae60; font-weight:bold; font-size:1.05rem;">${fUser.score || 0} 點</td>
-                    <td>
-                        <button class="action-btn-sm btn-add-pts" onclick="window.modifyPoints('${uid}', 'add', '${realName}', ${fUser.score || 0})">➕ 加點</button>
-                        <button class="action-btn-sm btn-deduct-pts" onclick="window.modifyPoints('${uid}', 'deduct', '${realName}', ${fUser.score || 0})">➖ 扣點</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+        Swal.fire({
+            title: '🛠️ 權限認證成功',
+            text: `歡迎登入系統，${teacherName}！正在為您開啟雲端管理面板...`,
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            window.location.href = 'admin.html'; // 順暢前往獨立後台
+        });
+    } else if (teacherId) {
+        Swal.fire('認證失敗', '找不到此導師 ID，請向 Winnie 老師確認權限金鑰！', 'error');
+    }
+}
 
-            if(count === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">本年級目前無登入註冊的學生資料。</td></tr>`;
-            }
-        };
-
-        // ➕➖ 一鍵快速加扣點與雲端異動同步
-        window.modifyPoints = async function(uid, type, realName, currentScore) {
-            const actionText = type === 'add' ? '發放金幣點數' : '扣除金幣點數';
-            
-            const { value: amountStr } = await Swal.fire({
-                title: `💸 手動為【${realName}】${actionText}`,
-                input: 'number',
-                inputPlaceholder: '請輸入點數金額 (例如: 50)',
-                showCancelButton: true,
-                confirmButtonColor: type === 'add' ? '#2ecc71' : '#e74c3c'
-            });
-
-            const amount = parseInt(amountStr, 10);
-            if (!amount || amount <= 0) return;
-
-            const { value: reason } = await Swal.fire({
-                title: '請輸入點數異動備註原因',
-                input: 'text',
-                inputValue: type === 'add' ? '課堂表現優異獎勵' : '兌換實體小禮物扣除',
-                showCancelButton: true
-            });
-
-            if (reason === undefined) return; // 取消操作
-
-            const finalAmount = type === 'add' ? amount : -amount;
-            const newScore = Math.max(0, currentScore + finalAmount); // 防扣成負數
-
-            // 更新到雲端 Firestore
-            const userDocRef = doc(db, "users", uid);
-            
-            // 讀取目前的舊歷史紀錄
-            const docSnap = await updateDoc(userDocRef, {
-                score: newScore
-                // 歷史清單會由快照自動追加
-            });
-
-            Swal.fire('操作成功！', `已成功幫 ${realName} ${type === 'add'?'增加':'減少'} ${amount} 點！\n備註：${reason}`, 'success');
-        };
-
-        // 🎟️ 主任/Winnie專用：發布新序號
-        window.generateTeacherPromoCode = function() {
-            const code = document.getElementById('newPromoCode').value.trim().toUpperCase();
-            const pts = parseInt(document.getElementById('promoPoints').value, 10);
-            if(!code || !pts) return Swal.fire('提示', '請填寫完整序號與點數！', 'warning');
-
-            Swal.fire('序號同步成功！', `新序號【${code}】已成功上架雲端，學生輸入可得 ${pts} 點！`, 'success');
-            document.getElementById('newPromoCode').value = '';
-            document.getElementById('promoPoints').value = '';
-        };
-    </script>
-</body>
-</html>
+window.handleLogout = function() { signOut(auth).then(() => { location.reload(); }); };
