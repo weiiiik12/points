@@ -14,10 +14,10 @@
     <div class="login-card">
         <h2 style="margin-top:0; color:#4a90e2;">🎒 HAGO 獎勵系統 2.0</h2>
         <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">請登入以同步雲端學習進度</p>
-        <input type="email" id="emailInput" class="login-input" placeholder=\"電子信箱 (Email)\">
+        <input type="email" id="emailInput" class="login-input" placeholder="電子信箱 (Email)">
         <input type="password" id="passwordInput" class="login-input" placeholder="密碼 (至少6位數)">
         <div class="btn-group-login">
-            <button id=\"btnLogin\" class="btn-login">登入</button>
+            <button id="btnLogin" class="btn-login">登入</button>
             <button id="btnRegister" class="btn-register">註冊新帳號</button>
         </div>
         <div id="loginError" style="color:red; margin-top:10px; font-size:0.85rem;"></div>
@@ -26,28 +26,28 @@
 
 <div class="app-container">
     
-    <header class="main-header">
-        <div class="user-profile">
-            <div class="avatar-container" onclick="changeCustomAvatar()">
-                <img id="userAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Hago" alt="頭像">
-                <div class="avatar-edit-badge">✏️</div>
+    <header class="main-header" style="background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+        <div class="user-profile" style="display: flex; align-items: center; gap: 15px;">
+            <div class="avatar-container" onclick="changeCustomAvatar()" style="position: relative; cursor: pointer;">
+                <img id="userAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Hago" alt="頭像" style="width: 50px; height: 50px; border-radius: 50%;">
+                <div class="avatar-edit-badge" style="position: absolute; bottom: 0; right: 0; background: white; border-radius: 50%; font-size: 0.7rem; padding: 2px;">✏️</div>
             </div>
             <div class="user-info">
                 <div class="name-row">
-                    <span id="childNameDisplay" class="child-name">載入中...</span>
-                    <button class="btn-rename-sub" onclick="changeNickname()">修改暱稱</button>
+                    <span id="childNameDisplay" class="child-name" style="font-weight: bold; font-size: 1.1rem;">載入中...</span>
+                    <button class="btn-rename-sub" onclick="changeNickname()" style="margin-left: 8px; font-size: 0.8rem; padding: 2px 6px;">修改暱稱</button>
                 </div>
-                <div class="score-badge">💰 擁有金幣：<span id="scoreDisplay">0</span> 點</div>
+                <div class="score-badge" style="color: #e67e22; font-weight: bold; margin-top: 4px;">💰 擁有金幣：<span id="scoreDisplay">0</span> 點</div>
             </div>
         </div>
-        <button class="btn-logout" onclick="window.handleLogout()">登出</button>
+        <button class="btn-logout" onclick="window.handleLogout()" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">登出</button>
     </header>
 
-    <div id="friendReqAlert" class="friend-req-alert" onclick="switchTab('forum')">
+    <div id="friendReqAlert" class="friend-req-alert" onclick="switchTab('forum')" style="display:none; background: #ff7675; color: white; padding: 10px; text-align: center; cursor: pointer; margin-top: 10px; border-radius: 8px;">
         <span>🔔 收到新的同學好友邀請！點擊前往廣場查看</span>
     </div>
 
-    <nav class="tab-nav">
+    <nav class="tab-nav" style="display: flex; gap: 5px; background: white; padding: 10px; margin-top: 10px; border-radius: 8px; overflow-x: auto;">
         <button class="tab-btn active" onclick="switchTab('quiz')">🎯 挑戰小學堂</button>
         <button class="tab-btn" onclick="switchTab('shop')">🎁 盲盒商店</button>
         <button class="tab-btn" onclick="switchTab('bank')">🏦 智慧定存</button>
@@ -56,116 +56,88 @@
         <button class="tab-btn" onclick="switchTab('achieve')">🏆 榮譽成就</button>
     </nav>
 
-    <div class="promo-redeem-bar">
-        <input type="text" id="promoCodeInput" placeholder="請輸入老師發放的獎勵序號 (如: ENG888)">
-        <button onclick="redeemPromoCode()">兌換獎勵</button>
+    <div class="promo-redeem-bar" style="display: flex; gap: 10px; margin-top: 15px; background: white; padding: 12px; border-radius: 8px;">
+        <input type="text" id="promoCodeInput" placeholder="請輸入老師發放的獎勵序號 (如: ENG888)" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+        <button onclick="redeemPromoCode()" style="background: #4a90e2; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;">兌換獎勵</button>
     </div>
 
-    <section id="tab-quiz" class="tab-content active-content">
-        <div class="card">
-            <h2>🎯 全科挑戰小學堂 <span id="weekendBadge" class="weekend-double-badge" style="display:none;">🔥 週末點數雙倍中！</span></h2>
-            <p class="subtitle">選擇想挑戰的科目，常態破關賺點數，週末還能解鎖限定題庫喔！</p>
+    <section id="tab-quiz" class="tab-content active-content" style="display: block; margin-top: 15px;">
+        <div class="card" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h2>🎯 全科挑戰小學堂 <span id="weekendBadge" class="weekend-double-badge" style="display:none; background: #e74c3c; color: white; padding: 2px 6px; font-size: 0.8rem; border-radius: 4px;">🔥 週末點數雙倍中！</span></h2>
+            <p class="subtitle" style="color: #666; font-size: 0.9rem;">選擇想挑戰的科目，常態破關賺點數，週末還能解鎖限定題庫喔！</p>
             
-            <div class="subject-selector">
+            <div class="subject-selector" style="display: flex; gap: 10px; margin: 15px 0;">
                 <button class="btn-subject active" onclick="selectSubject('eng')">🔤 英文科</button>
                 <button class="btn-subject" onclick="selectSubject('math')">🔢 數學科</button>
                 <button class="btn-subject" onclick="selectSubject('chi')">📝 國語科</button>
             </div>
 
-            <div class="team-challenge-box">
-                <h3>👥 好友共答 (組隊挑戰)</h3>
-                <p>輸入同學的隊伍房間號碼，2~8人一起答對，雙方同時獲得巨額點數！</p>
-                <div class="team-input-group">
-                    <input type="text" id="teamRoomInput" placeholder="請輸入房間 Room ID">
-                    <button class="btn-primary" onclick="joinTeamChallenge()">綁定隊伍挑戰</button>
+            <div class="team-challenge-box" style="background: #f0f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin-top: 0;">👥 好友共答 (組隊挑戰)</h3>
+                <p style="font-size: 0.85rem; color: #555;">輸入同學的隊伍房間號碼，2~8人一起答對，雙方同時獲得點數報酬！</p>
+                <div class="team-input-group" style="display: flex; gap: 8px;">
+                    <input type="text" id="teamRoomInput" placeholder="請輸入房間 Room ID" style="flex: 1; padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                    <button class="btn-primary" onclick="joinTeamChallenge()" style="background: #2ecc71; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">綁定隊伍</button>
                 </div>
             </div>
 
             <div class="level-section">
-                <h3>🗺️ 關卡地圖 (全科架構預留)</h3>
-                <div class="level-grid" id="quizLevelGrid">
+                <h3>🗺️ 關卡地圖</h3>
+                <div class="level-grid" id="quizLevelGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;">
                     </div>
             </div>
         </div>
     </section>
 
-    <section id="tab-shop" class="tab-content">
-        <div class="card">
+    <section id="tab-shop" class="tab-content" style="display: none; margin-top: 15px;">
+        <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
             <h2>🎁 盲盒抽獎 × 商店直購</h2>
             <p class="subtitle">Winnie 老師的限定商品櫥窗！兌換成功的禮物會直接放進妳的 🎒 背包喔！</p>
-            
-            <div class="gacha-showcase">
-                <button class="btn-gacha-start" onclick="window.startGacha && window.startGacha()">🎲 消耗 50 點：啟動盲盒抽獎</button>
-            </div>
-
-            <h3 style="margin-top: 25px;">🏪 老師的手動直購櫥窗 (同步 Google Sheet 剩餘庫存)</h3>
-            <div class="shop-grid" id="googleSheetShopGrid">
-                <div class="shop-item-placeholder">
-                    <div class="placeholder-img">📦</div>
-                    <h4>商品載入中...</h4>
-                    <p>請老師於後台綁定 Google 試算表網址</p>
-                </div>
-            </div>
-
-            <h3 style="margin-top:25px;">🎒 我的背包 (已兌換禮物/卡片)</h3>
+            <button class="btn-gacha-start" onclick="window.startGacha && window.startGacha()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #ff9f43, #ee5253); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;">🎲 消耗 50 點：啟動盲盒抽獎</button>
+            <div id="googleSheetShopGrid" style="margin-top: 20px;"></div>
+            <h3 style="margin-top:25px;">🎒 我的背包 (已兌換禮物)</h3>
             <div id="inventoryContainer" class="inventory-grid"></div>
         </div>
     </section>
 
-    <section id="tab-bank" class="tab-content">
-        <div class="card">
+    <section id="tab-bank" class="tab-content" style="display: none; margin-top: 15px;">
+        <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
             <h2>🏦 智慧理財銀行</h2>
-            <div class="bank-stats">
-                <div class="stat-box"><h4>活存餘額</h4><p><span id="liquidBalance">0</span> 點</p></div>
-                <div class="stat-box"><h4>估計日利息</h4><p><span id="estimatedInterest">0</span> 點</p></div>
+            <div class="bank-actions" style="margin: 15px 0;">
+                <input type="number" id="bankAmount" placeholder="輸入點數" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <button class="btn-success" onclick="depositLiquid()" style="background: #2ecc71; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">存入活存</button>
             </div>
-            <div class="bank-actions">
-                <input type="number" id="bankAmount" placeholder="輸入點數">
-                <div class="btn-group">
-                    <button class="btn-success" onclick="depositLiquid()">💰 存入活存</button>
-                    <button class="btn-danger" onclick="withdrawLiquid()">🏪 提領現金</button>
-                </div>
-            </div>
-            
-            <h3 style="margin-top:20px;">🔒 定存理財商品 (鎖定天數享高額複利)</h3>
-            <div id="fixedDepositProducts" class="fixed-products-grid"></div>
-            <h3 style="margin-top:20px;">📄 我的定存單</h3>
-            <div id="myFixedDeposits" class="my-deposits-list"></div>
-        </div>
-    </section>
+        </section>
 
-    <section id="tab-forum" class="tab-content">
-        <div class="card">
+    <section id="tab-forum" class="tab-content" style="display: none; margin-top: 15px;">
+        <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
             <h2>👥 班級動態廣角廣場</h2>
-            <div class="post-box">
-                <textarea id="postInput" placeholder="想跟全班同學或 Winnie 老師說什麼嗎？(發文需要 5 點金幣喔)"></textarea>
-                <button class="btn-primary" onclick="createPost()">🚀 發佈留言</button>
-            </div>
-            <div id="postList" class="post-list"></div>
+            <textarea id="postInput" placeholder="想跟全班同學說什麼嗎？" style="width: 100%; height: 60px; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></textarea>
+            <button class="btn-primary" onclick="createPost()" style="margin-top: 8px; background: #4a90e2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">🚀 發佈留言</button>
+            <div id="postList" class="post-list" style="margin-top: 15px;"></div>
         </div>
     </section>
 
-    <section id="tab-market" class="tab-content">
-        <div class="card">
+    <section id="tab-market" class="tab-content" style="display: none; margin-top: 15px;">
+        <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
             <h2>⚖️ 班級物品自由交易行</h2>
-            <p class="subtitle" style="color: #e67e22;">⚠️ 注意：拍賣行拍賣成功後，系統將自動扣除 10% 的手續費！</p>
-            <button class="btn-warning" style="width:100%; margin-bottom:15px;" onclick="openSellModal()">🏪 上架我背包裡的物品</button>
-            <div id="marketList" class="market-grid"></div>
+            <p style="color: #e67e22; font-size: 0.85rem;">⚠️ 注意：拍賣行拍賣成功後，將自動扣除 10% 的手續費！</p>
+            <div id="marketList"></div>
         </div>
     </section>
 
-    <section id="tab-achieve" class="tab-content">
-        <div class="card">
+    <section id="tab-achieve" class="tab-content" style="display: none; margin-top: 15px;">
+        <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
             <h2>🏆 榮譽成就與天賦勳章</h2>
-            <p class="subtitle">完成指定的學習任務即可解鎖稱號，還能配戴在頭像旁在廣場炫耀喔！</p>
-            <div id="achievementContainer" class="achievement-list-grid"></div>
+            <div id="achievementContainer"></div>
         </div>
     </section>
 
-    <footer class="admin-footer" style="margin-top: 30px; text-align: center;">
-        <button class="btn-settings" onclick="openAdminPanel()">⚙️ 進入 Winnie 老師專屬管理後台</button>
+    <footer class="admin-footer" style="margin-top: 40px; text-align: center; padding-bottom: 20px;">
+        <button class="btn-settings" style="background: #636e72; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold;">⚙️ 進入 Winnie 老師專屬管理後台</button>
     </footer>
 </div>
 
+<script type="module" src="./js/main.js"></script>
 </body>
 </html>
