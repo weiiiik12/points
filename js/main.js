@@ -2,7 +2,6 @@
 import { auth, db, initError } from './firebase-init.js';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { DEFAULT_TIERS, ACHIEVEMENT_LIST } from './constants.js';
 
 // 全域狀態管理
 let currentUser = null;
@@ -15,6 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuthListener();
     checkWeekendStatus();
     renderLevelGrid();
+    
+    // 對接 index.html 老師後台密碼按鈕
+    const adminBtn = document.querySelector('.btn-settings');
+    if (adminBtn) {
+        adminBtn.removeAttribute('onclick'); // 移除舊的 inline onclick
+        adminBtn.addEventListener('click', openAdminPanel);
+    }
 });
 
 // 📅 1. 判斷是否為週末並顯示雙倍點數 Badge
@@ -33,9 +39,12 @@ function checkWeekendStatus() {
 function initAuthListener() {
     const loginOverlay = document.getElementById('loginOverlay');
     
-    // 綁定按鈕點擊事件
-    document.getElementById('btnLogin').addEventListener('click', loginUser);
-    document.getElementById('btnRegister').addEventListener('click', registerUser);
+    // 安全繫結登入註冊按鈕事件
+    const btnLogin = document.getElementById('btnLogin');
+    const btnRegister = document.getElementById('btnRegister');
+    
+    if (btnLogin) btnLogin.addEventListener('click', loginUser);
+    if (btnRegister) btnRegister.addEventListener('click', registerUser);
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -43,7 +52,7 @@ function initAuthListener() {
             userRef = doc(db, "users", user.uid);
             if (loginOverlay) loginOverlay.style.display = 'none';
             
-            // 即時監聽學生雲端資料
+            // 即時監聽學生雲端資料 (已移除所有舊函數呼叫，防止報錯卡死)
             onSnapshot(userRef, (docSnap) => {
                 if (docSnap.exists()) {
                     userData = docSnap.data();
@@ -51,7 +60,7 @@ function initAuthListener() {
                 } else {
                     // 新註冊學生，建立初始資料庫欄位
                     const initialData = {
-                        realName: user.email.split('@')[0], // 老師查看的真實姓名預設為Email前綴
+                        realName: user.email.split('@')[0], // 老師查看的真實姓名預設為 Email 前綴
                         nickname: "新進小達人", // 廣場所看暱稱
                         avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
                         score: 100,
@@ -62,6 +71,8 @@ function initAuthListener() {
                     };
                     setDoc(userRef, initialData);
                 }
+            }, (error) => {
+                console.error("Firestore 監聽失敗:", error);
             });
         } else {
             if (loginOverlay) loginOverlay.style.display = 'flex';
@@ -79,7 +90,7 @@ function updateStudentUI() {
     const liquidEl = document.getElementById('liquidBalance');
 
     if (nameEl) nameEl.innerText = `${userData.nickname} (${userData.realName})`;
-    if (scoreEl) scoreEl.innerText = userData.score;
+    if (scoreEl) scoreEl.innerText = userData.score || 0;
     if (avatarEl && userData.avatarUrl) avatarEl.src = userData.avatarUrl;
     if (liquidEl) liquidEl.innerText = userData.liquidBalance || 0;
 }
@@ -88,7 +99,9 @@ function updateStudentUI() {
 window.selectSubject = function(subject) {
     currentSelectedSubject = subject;
     document.querySelectorAll('.btn-subject').forEach(btn => btn.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
     renderLevelGrid();
 };
 
@@ -114,7 +127,7 @@ function startLevelChallenge(levelNum) {
     
     Swal.fire({
         title: `關卡挑戰：第 ${levelNum} 關`,
-        text: `妳開啟了當前科目的第 ${levelNum} 關。${bonusText} 內容 Winnie 老師正在建置更龐大的全科資料庫系統中，敬請期待！`,
+        text: `妳開啟了當前科目的第 ${levelNum} 關。${bonusText} 內容 Winnie 老師正在建置更龐龐大的全科資料庫系統中，敬請期待！`,
         icon: 'info',
         confirmButtonText: '收到！我會好好複習'
     });
@@ -150,10 +163,10 @@ window.redeemPromoCode = async function() {
         
         // 檢查是否重複領取
         const history = userData.history || [];
-        const hasClaimed = history.some(h => h.reason.includes(`[序號兌換:${code}]`));
-        if (hasClaimed) return Swal.fire('不重複領取', '這個兌換碼你已經領過囉！', 'error');
+        const hasClaimed = history.some(h => h.reason && h.reason.includes(`[序號兌換:${code}]`));
+        if (hasClaimed) return Swal.fire('不能重複領取', '這個兌換碼你已經領過囉！', 'error');
 
-        const newScore = userData.score + reward.points;
+        const newScore = (userData.score || 0) + reward.points;
         const newHistory = [...history, { time: new Date().toLocaleString(), amount: reward.points, reason: `[序號兌換:${code}] ${reward.reason}` }];
 
         await updateDoc(userRef, {
@@ -183,6 +196,7 @@ window.changeCustomAvatar = async function() {
     }
 };
 
+// 學生修改暱稱
 window.changeNickname = async function() {
     const { value: newNick } = await Swal.fire({
         title: '👥 修改你在廣場的暱稱',
@@ -222,11 +236,14 @@ window.switchTab = function(tabId) {
     
     const targetTab = document.getElementById(`tab-${tabId}`);
     if (targetTab) targetTab.classList.add('active-content');
-    event.currentTarget.classList.add('active');
+    
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
 };
 
-// 🔐 Winnie 老師專屬密碼鎖進入管理功能
-window.openAdminPanel = async function() {
+// 🔐 Winnie 老師專屬密碼鎖進入管理功能 -> 一鍵切換至 admin.html
+async function openAdminPanel() {
     const { value: password } = await Swal.fire({
         title: '🔑 老師安全認證',
         input: 'password',
@@ -234,16 +251,20 @@ window.openAdminPanel = async function() {
         showCancelButton: true
     });
 
-    if (password === "winnie888") { // 預設密碼
+    if (password === "winnie888") { // 妳的預設後台密碼
         Swal.fire({
             title: '🛠️ 老師權限認證通過',
-            text: '稍後我們將把「Google 表單獎品管理、Excel 庫存自動連線、序號大量產出器」完整更新在獨立的 admin.html 教師專屬後台面板！',
-            icon: 'success'
+            text: '即將進入 Winnie 老師專屬雲端管理後台頁面...',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            window.location.href = 'admin.html'; // 順暢前往獨立後台！
         });
     } else if (password) {
         Swal.fire('認證失敗', '密碼不正確喔！你是不是調皮的學生？', 'error');
     }
-};
+}
 
 // 處理登出
 window.handleLogout = function() {
@@ -256,6 +277,7 @@ window.handleLogout = function() {
 async function loginUser() {
     const email = document.getElementById('emailInput').value.trim();
     const password = document.getElementById('passwordInput').value.trim();
+    if(!email || !password) return;
     try {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
@@ -265,6 +287,7 @@ async function loginUser() {
 async function registerUser() {
     const email = document.getElementById('emailInput').value.trim();
     const password = document.getElementById('passwordInput').value.trim();
+    if(!email || !password) return;
     try {
         await createUserWithEmailAndPassword(auth, email, password);
         Swal.fire('註冊成功', '請填寫基本姓名並開啟你的探索之旅！', 'success');
