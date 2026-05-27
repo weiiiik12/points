@@ -15,8 +15,11 @@ const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT
 const GOOGLE_SHEET_LEVELS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=392728486&single=true&output=csv"; 
 const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=485295361&single=true&output=csv";
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadExcelCredentials(); 
+// 🌟 改為 async，確保先載入 Excel 名冊後，再來檢查是否要「自動登入」
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadExcelCredentials(); // 1. 先把全校名冊下載好
+    checkAutoLogin();             // 2. 檢查之前是不是登入過？是的話自動放行！
+    
     initAuthButtons();
     checkWeekendStatus();
     loadCloudLevels();
@@ -46,9 +49,29 @@ async function loadExcelCredentials() {
                 grade: (lines[i][headers.indexOf('grade')] || 'g1').trim().toLowerCase()
             });
         }
-        console.log("Excel 學生庫同步完成，共計：" + excelUsersDatabase.length + " 筆。");
     } catch (err) {
         console.error("預載帳密失敗:", err);
+    }
+}
+
+// 🛡️ 自動登入檢查機制 (記憶吐司)
+function checkAutoLogin() {
+    const savedEmail = localStorage.getItem('hago_logged_in_email');
+    const savedGuest = localStorage.getItem('hago_logged_in_guest');
+
+    if (savedEmail) {
+        // 如果瀏覽器記住了某個信箱，去名冊找找看
+        const matchedUser = excelUsersDatabase.find(u => u.email === savedEmail);
+        if (matchedUser) {
+            const userCleanId = savedEmail.replace(/[^a-zA-Z0-9]/g, "_");
+            enterSystem(userCleanId, matchedUser.realName);
+        } else {
+            // 如果老師在 Excel 把這學生刪了，就清除記憶
+            localStorage.removeItem('hago_logged_in_email');
+        }
+    } else if (savedGuest) {
+        // 如果上次是遊客身分玩到一半
+        enterSystem(savedGuest, "體驗小遊客");
     }
 }
 
@@ -81,6 +104,9 @@ async function loginUser() {
     const matchedUser = excelUsersDatabase.find(u => u.email === email && u.password === password);
 
     if (matchedUser) {
+        // 🎉 登入成功！把信箱存進瀏覽器記憶裡
+        localStorage.setItem('hago_logged_in_email', email);
+        
         const userCleanId = email.replace(/[^a-zA-Z0-9]/g, "_"); 
         enterSystem(userCleanId, matchedUser.realName);
     } else {
@@ -95,6 +121,9 @@ async function loginAsGuest() {
     try {
         const credential = await signInAnonymously(auth);
         const guestUid = "guest_" + credential.user.uid.substring(0, 8);
+        
+        // 🎉 遊客登入成功！把遊客 ID 存進瀏覽器記憶裡
+        localStorage.setItem('hago_logged_in_guest', guestUid);
         enterSystem(guestUid, "體驗小遊客");
     } catch (err) {
         if (errorEl) errorEl.innerText = "遊客試玩開啟失敗: " + err.message;
@@ -136,9 +165,11 @@ async function enterSystem(userCleanId, realName) {
         }
     });
 
-    Swal.fire('登入成功', `歡迎來到皓孩子網，${realName}！✨`, 'success').then(() => {
-        renderLevelGrid(); 
-    });
+    // 只有在手動輸入帳密時才顯示歡迎回來（自動登入則靜默放行）
+    if(event && event.type === 'click') {
+        Swal.fire('登入成功', `歡迎來到皓孩子網，${realName}！✨`, 'success');
+    }
+    renderLevelGrid(); 
 }
 
 function updateStudentUI() {
@@ -172,6 +203,7 @@ async function loadCloudLevels() {
                 url: (lines[i][headers.indexOf('url')] || '').trim()
             });
         }
+        renderLevelGrid();
     } catch (err) {
         console.error("關卡資料加載失敗:", err);
     }
@@ -345,4 +377,9 @@ async function openAdminPanel() {
     }
 }
 
-window.handleLogout = function() { signOut(auth).then(() => { location.reload(); }); };
+// 🛑 登出按鈕：清除記憶並重整網頁
+window.handleLogout = function() { 
+    localStorage.removeItem('hago_logged_in_email');
+    localStorage.removeItem('hago_logged_in_guest');
+    signOut(auth).then(() => { location.reload(); }).catch(() => { location.reload(); }); 
+};
