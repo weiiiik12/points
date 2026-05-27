@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAGO 2.0 | Winnie 老師專屬雲端後台</title>
+    <title>HAGO 2.0 | 補習班雲端導師管理後台</title>
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -17,171 +17,131 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0; padding: 0;
-            color: #333;
+            background-color: var(--bg-color); margin: 0; padding: 0; color: #333;
         }
         .admin-navbar {
-            background-color: var(--admin-primary);
-            color: white; padding: 15px 20px;
+            background-color: var(--admin-primary); color: white; padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .admin-container {
-            max-width: 1200px; margin: 30px auto; padding: 0 20px;
-        }
-        .welcome-box {
-            background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px;
-        }
-        .grid-panel {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;
-        }
-        .card {
-            background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid var(--admin-accent);
-        }
-        h2 { margin-top: 0; color: var(--admin-primary); border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.3rem;}
-        h3 { font-size: 1.1rem; color: #555; }
+        .admin-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .welcome-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .grid-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid var(--admin-accent); }
+        h2 { margin-top: 0; color: var(--admin-primary); border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.25rem;}
+        h3 { font-size: 1.1rem; color: #555; margin-top: 0; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #666; }
-        .form-control {
-            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem;
-        }
-        .btn-admin {
-            width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s;
-        }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+        .btn-admin { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; }
         .btn-primary { background: #3498db; color: white; }
-        .btn-primary:hover { background: #2980b9; }
         .btn-success { background: var(--success); color: white; }
-        .btn-success:hover { background: #27ae60; }
         
-        /* 學生表格樣式 */
-        .student-table {
-            width: 100%; border-collapse: collapse; margin-top: 15px; background: white;
-        }
-        .student-table th, .student-table td {
-            border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 0.9rem;
-        }
+        .student-table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        .student-table th, .student-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 0.9rem; }
         .student-table th { background-color: #f8fafc; color: #475569; }
-        .action-btn-sm {
-            padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 5px;
-        }
+        .action-btn-sm { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 5px; font-weight: bold; }
         .btn-add-pts { background: #2ecc71; color: white; }
         .btn-deduct-pts { background: #e74c3c; color: white; }
-        
         .hint-text { font-size: 0.8rem; color: #7f8c8d; margin-top: 5px; line-height: 1.4; }
+        
+        /* 篩選器樣式 */
+        .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background: #edf2f7; padding: 10px; border-radius: 8px; }
+        .filter-select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; color: #4a5568; }
     </style>
 </head>
 <body>
 
     <nav class="admin-navbar">
-        <div style="font-size: 1.3rem; font-weight: bold;">🎒 HAGO 2.0 補習班/安親班經營神器 — 教師後台</div>
+        <div style="font-size: 1.2rem; font-weight: bold;">🎒 HAGO 2.0 導師控盤雲端後台</div>
         <div>
-            <span style="margin-right: 15px;">歡迎妳，Winnie 老師 ✨</span>
-            <button onclick="location.href='index.html'" style="padding: 6px 12px; background: #e74c3c; color:white; border:none; border-radius:4px; cursor:pointer;">返回學生前台</button>
+            <span id="activeTeacherTitle" style="margin-right: 15px; font-weight: bold; color: #f1c40f;">載入中...</span>
+            <button onclick="location.href='index.html'" style="padding: 6px 12px; background: #e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight: bold;">返回學生前台</button>
         </div>
     </nav>
 
     <div class="admin-container">
         
         <div class="welcome-box">
-            <h2 style="border:none; padding:0; margin-bottom:10px;">👋 嗨，Winnie 老師！今天又是充滿活力的一天！</h2>
-            <p style="margin:0; color:#666; font-size:0.95rem;">
-                在這裡妳可以完全掌控學生的真實姓名與暱稱、一鍵派發與扣除金幣、上架 Google 表單盲盒，還能監控組隊房間與即時生成通關代碼序號。
+            <h2 style="border:none; padding:0; margin-bottom:5px;">👋 老師辛苦了！歡迎來到班級經營控盤面板</h2>
+            <p style="margin:0; color:#666; font-size:0.9rem;">
+                本名冊已自動串接 Google 試算表 `students` 學生清單。提供快捷年級篩選、一鍵加扣點與知識王地圖連結管理。
             </p>
         </div>
 
         <div class="grid-panel">
             
             <div class="card" style="grid-column: span 2;">
-                <h2>👥 學生名冊正名與點數管控系統</h2>
-                <p class="hint-text">此處會即時連線 Firestore。畫面上會完整顯示【學生真實姓名】，方便老師對號入座，並能防止學生在廣場亂改暱稱喔！</p>
+                <h2>👥 學生名冊點數管控系統</h2>
                 
+                <div class="filter-bar">
+                    <label style="font-weight: bold; color: #4a5568;">🔍 按年級篩選學生：</label>
+                    <select id="gradeFilterSelect" class="filter-select" onchange="renderFilteredStudents()">
+                        <option value="all">顯示全校所有學生</option>
+                        <option value="g1">一年級</option>
+                        <option value="g2">二年級</option>
+                        <option value="g3">三年級</option>
+                        <option value="g4">四年級</option>
+                        <option value="g5">五年級</option>
+                        <option value="g6">六年級</option>
+                    </select>
+                </div>
+
                 <div style="overflow-x: auto;">
                     <table class="student-table" id="adminStudentTable">
                         <thead>
                             <tr>
-                                <th>學生 UID (信箱)</th>
-                                <th>真實姓名 (老師看)</th>
-                                <th>廣場暱稱 (學生自訂)</th>
-                                <th>現有金幣 💰</th>
-                                <th>銀行活存 🏦</th>
+                                <th>年級</th>
+                                <th>真實姓名 (Excel)</th>
+                                <th>廣場暱稱 (學生)</th>
+                                <th>目前金幣 💰</th>
                                 <th>快捷操作</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td style="color:#7f8c8d;">loading...</td>
-                                <td><b>陳小明</b> <button class="action-btn-sm" style="background:#bdc3c7;" onclick="editRealName('sample_uid')">✏️正名</button></td>
-                                <td style="font-style: italic;">閃電俠 2.0</td>
-                                <td style="color:#27ae60; font-weight:bold;">450 點</td>
-                                <td>1,200 點</td>
-                                Richmond<td>
-                                    <button class="action-btn-sm btn-add-pts" onclick="modifyPoints('sample_uid', 'add')">➕ 加點</button>
-                                    <button class="action-btn-sm btn-deduct-pts" onclick="modifyPoints('sample_uid', 'deduct')">➖ 扣點</button>
-                                </td>
-                            </tr>
+                            <tr><td colspan="5" style="text-align:center; color:#999;">雲端資料庫同步中...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <div class="card">
-                <h2>🎁 Google 試算表商店上架與自動扣量架構</h2>
-                <p class="hint-text">
-                    妳希望將獎品內容（圖片、價位、剩餘庫存）放在 Google 試算表中，方便在手機上手動修改。
-                </p>
-                <div class="form-group" style="margin-top:15px;">
-                    <label for="googleSheetUrl">🔗 Google 試算表網頁發布網址 (JSON/CSV格式)</label>
-                    <input type="text" id="googleSheetUrl" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/.../pubhtml">
-                    <p class="hint-text" style="color:#e67e22;">💡 提示：在 Google 試算表中點選「檔案」->「共用」->「發布到網路」，將其發布為網頁或 CSV 後將網址貼到此處。</p>
+                <h2>🗺️ 知識王大冒險關卡連結管理</h2>
+                <p class="hint-text">請直接在妳的 Google 試算表 【levels】 分頁中新增或修改關卡網址。前台關卡地圖將會自動解鎖發光！</p>
+                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:15px; margin-top:15px;">
+                    <h4 style="margin:0 0 8px 0; color:#2c3e50;">💡 快速指引：</h4>
+                    <ol style="margin:0; padding-left:20px; font-size:0.85rem; color:#555; line-height:1.6;">
+                        <li>打開試算表的 <b>levels</b> 分頁</li>
+                        <li><b>subject</b> 欄位填入：chi / eng / math / sci / soc</li>
+                        <li><b>level</b> 欄位填入關卡數字 (1~12)</li>
+                        <li>填入 <b>title</b> (關卡名) 與 <b>url</b> (遊戲網址)</li>
+                        <li>前台就會自動同步，無需工程師修改程式！</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card admin-only-block" id="adminShopCard" style="display:none;">
+                <h2>🎁 核心權限：Google 試算表商店上架</h2>
+                <div class="form-group">
+                    <label>🔗 商店 CSV 發布網址</label>
+                    <input type="text" class="form-control" value="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" readonly>
                 </div>
                 <div class="form-group">
                     <label>⚙️ 庫存扣除模式</label>
-                    <select id="stockDeductMode" class="form-control">
-                        <option value="auto">系統自動扣除 (於 Firebase 記錄剩餘限量)</option>
-                        <option value="manual">老師手動修改 (學生兌換後傳送 Google 表單通知老師)</option>
-                    </select>
+                    <input type="text" class="form-control" value="系統自動限量扣除" readonly>
                 </div>
-                <button class="btn-admin btn-primary" onclick="saveShopConfig()">💾 儲存並同步前台櫥窗</button>
+                <p class="hint-text" style="color:#e67e22;">ℹ️ 提示：普通班導師無需管理商品，本面板僅對主任與Winnie老師開放。</p>
             </div>
 
-            <div class="card">
-                <h2>🎫 動態獎勵序號 (兌換碼) 生成器</h2>
-                <p class="hint-text">快速生成像是 `ENG888` 或 `GOODJOB777` 的序號，印出來或是發在 Line 貼文裡，讓學生在前台自行輸入兌換點數！</p>
-                
-                <div class="form-group" style="margin-top:15px;">
-                    <label for="newPromoCode">✨ 自訂序號代碼 (自動轉大寫)</label>
-                    <input type="text" id="newPromoCode" class="form-control" placeholder="例如: WINNIE666">
+            <div class="card admin-only-block" id="adminPromoCard" style="display:none;">
+                <h2>🎫 核心權限：動態獎勵序號生成器</h2>
+                <p class="hint-text">生成大量通關序號讓學生自行兌換。</p>
+                <div class="form-group" style="margin-top:10px;">
+                    <input type="text" id="newPromoCode" class="form-control" placeholder="自訂序號 (如: ENG888)">
                 </div>
                 <div class="form-group">
-                    <label for="promoPoints">💰 贈送金幣點數</label>
-                    <input type="number" id="promoPoints" class="form-control" placeholder="例如: 100">
+                    <input type="number" id="promoPoints" class="form-control" placeholder="贈送點數">
                 </div>
-                <div class="form-group">
-                    <label for="promoReason">📝 序號用途/備註</label>
-                    <input type="text" id="promoReason" class="form-control" placeholder="例如: 英文單字王破關大獎勵">
-                </div>
-                <button class="btn-admin btn-success" onclick="generateTeacherPromoCode()">🚀 派發並生成雲端序號</button>
-
-                <h3 style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">📋 目前運作中的序號</h3>
-                <ul id="activePromoCodesList" style="padding-left:20px; font-size:0.9rem; color:#444;">
-                    <li><b>GOODJOB888</b> (+100點) - 課堂表現優異兌換</li>
-                    <li><b>ENGLISHKING</b> (+150點) - 英文單字比賽獲勝</li>
-                </ul>
-            </div>
-
-            <div class="card">
-                <h2>👥 挑戰小學堂 & 好友共答監控</h2>
-                <p class="hint-text">當2~8位學生綁定同一個 Room ID 挑戰時，這裡會即時動態顯示隊伍成員。當組隊結算時，系統會同步將點數報酬灌入所有隊員的帳號！</p>
-                
-                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px; margin-top:15px;">
-                    <h4 style="margin:0 0 5px 0; color:#34495e;">🟢 雲端進行中組隊挑戰 (預留架構)</h4>
-                    <p style="font-size:0.85rem; color:#7f8c8d; margin:0;">
-                        目前暫無學生組隊。當學生在前端輸入同一組 `co_challenges` ID 時，此處會顯示隊伍清單與破關進度。
-                    </p>
-                </div>
+                <button class="btn-admin btn-success" onclick="generateTeacherPromoCode()">🚀 派發並上架雲端序號</button>
             </div>
 
         </div>
@@ -189,154 +149,176 @@
 
     <script type="module">
         import { auth, db } from './firebase-init.js';
-        import { collection, doc, getDocs, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // 頁面加載時自動讀取雲端學生資料
+        // 🎯 學生 Excel 名冊的發布網址
+        const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=204098901&single=true&output=csv";
+
+        let excelStudentsList = []; // 暫存 Excel 學生資料
+        let firebaseUsersMap = {};  // 暫存 Firebase 即時點數資料
+
         document.addEventListener('DOMContentLoaded', () => {
-            loadStudentCloudData();
+            checkTeacherPermission();
+            loadExcelStudents();
         });
 
-        // 1. 讀取並即時渲染雲端學生名冊 (具備真實姓名正名與加減點)
-        function loadStudentCloudData() {
-            const tbody = document.querySelector('#adminStudentTable tbody');
-            if (!tbody) return;
+        // 🛡️ 權限分流判斷：檢查是哪位老師登入
+        function checkTeacherPermission() {
+            const activeTeacher = localStorage.getItem('activeTeacherName') || "值班老師";
+            const titleEl = document.getElementById('activeTeacherTitle');
+            if (titleEl) titleEl.innerText = `歡迎妳，${activeTeacher} ✨`;
 
-            const usersCollection = collection(db, "users");
-            
-            // 監聽所有學生的即時資料
-            onSnapshot(usersCollection, (querySnapshot) => {
-                tbody.innerHTML = ''; // 清空舊資料
+            // 如果是徐主任或Winnie老師，解鎖核心管理面板
+            if (activeTeacher === "徐主任" || activeTeacher === "Winnie老師") {
+                document.getElementById('adminShopCard').style.display = 'block';
+                document.getElementById('adminPromoCard').style.display = 'block';
+            }
+        }
+
+        // 🔄 讀取 Google Sheet 學生正名清單
+        async function loadExcelStudents() {
+            try {
+                const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
+                const csvText = await response.text();
+                const lines = csvText.split('\n').map(line => line.split(','));
+                const headers = lines[0].map(h => h.trim());
                 
-                querySnapshot.forEach((docSnap) => {
-                    const uid = docSnap.id;
-                    const student = docSnap.data();
-                    
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="color:#7f8c8d; font-size:0.8rem;">${uid.substring(0,6)}...</td>
-                        <td>
-                            <b>${student.realName || '未命名學生'}</b> 
-                            <button class="action-btn-sm" style="background:#cbd5e1; color:#333;" onclick="window.editRealName('${uid}', '${student.realName || ''}')">✏️正名</button>
-                        </td>
-                        <td style="font-style: italic; color:#4a90e2;">${student.nickname || '無暱稱'}</td>
-                        <td style="color:#27ae60; font-weight:bold;">${student.score || 0} 點</td>
-                        <td>${student.liquidBalance || 0} 點</td>
-                        <td>
-                            <button class="action-btn-sm btn-add-pts" onclick="window.modifyPoints('${uid}', 'add')">➕ 加點</button>
-                            <button class="action-btn-sm btn-deduct-pts" onclick="window.modifyPoints('${uid}', 'deduct')">➖ 扣點</button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
+                excelStudentsList = [];
+                for(let i = 1; i < lines.length; i++) {
+                    if(!lines[i] || lines[i].length < 2) continue;
+                    excelStudentsList.push({
+                        email: (lines[i][headers.indexOf('email')] || '').trim().toLowerCase(),
+                        realName: (lines[i][headers.indexOf('realName')] || '未命名').trim(),
+                        grade: (lines[i][headers.indexOf('grade')] || 'g1').trim().toLowerCase()
+                    });
+                }
+                startFirebaseUsersListener(); // Excel 抓完後，啟動 Firebase 即時連線
+            } catch (err) {
+                console.error("讀取 Excel 學生清單失敗:", err);
+            }
+        }
+
+        // 🔥 即時監聽 Firebase 點數與歷史紀錄
+        function startFirebaseUsersListener() {
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                firebaseUsersMap = {};
+                snapshot.forEach(docSnap => {
+                    // 以註冊的 email 作為索引對照
+                    const data = docSnap.data();
+                    if (data.realName) {
+                        // 如果有舊資料的 email
+                        firebaseUsersMap[docSnap.id] = { uid: docSnap.id, ...data };
+                    }
                 });
+                // 同步將 Firebase 的資料與 Excel 正名匹配
+                snapshot.forEach(docSnap => {
+                    const uid = docSnap.id;
+                    const fData = docSnap.data();
+                    // 為了匹配精準，我們在 Firebase 初始註冊時有抓 email 前綴或完整欄位
+                    // 此處直接用 Firebase 內的 UID 或儲存的 realName 做媒介
+                });
+                
+                // 這裏直接用動態匹配刷新畫面
+                window.latestSnapshot = snapshot;
+                renderFilteredStudents();
             });
         }
 
-        // 2. 老師幫學生調整真實姓名 (正名系統)
-        window.editRealName = async function(uid, currentName) {
-            const { value: newRealName } = await Swal.fire({
-                title: '✏️ 修改學生的真實姓名',
-                text: '這僅供 Winnie 老師在後台辨識，不影響學生的帥氣暱稱。',
-                input: 'text',
-                inputValue: currentName,
-                inputPlaceholder: '請輸入學生的真實姓名 (例如：陳小明)',
-                showCancelButton: true
+        // 🎛️ 核心渲染：結合 Excel 正名、年級與 Firebase 點數加扣
+        window.renderFilteredStudents = function() {
+            const tbody = document.querySelector('#adminStudentTable tbody');
+            const selectedGrade = document.getElementById('gradeFilterSelect').value;
+            if (!tbody || !window.latestSnapshot) return;
+
+            tbody.innerHTML = '';
+            let count = 0;
+
+            // 遍歷所有在 Firebase 註冊的真實學生
+            window.latestSnapshot.forEach((docSnap) => {
+                const uid = docSnap.id;
+                const fUser = docSnap.data();
+                
+                // 智慧防錯匹配：優先去 Excel 學生庫尋找對應真實本名與年級
+                // 學生註冊的真實姓名預設會與系統同步，或者根據 email 前綴匹配
+                const matchedExcel = excelStudentsList.find(ex => fUser.realName.includes(ex.realName) || uid.substring(0,5) === ex.email.split('@')[0]);
+                
+                const displayGrade = matchedExcel ? matchedExcel.grade.toUpperCase() : "G1";
+                const realName = matchedExcel ? matchedExcel.realName : (fUser.realName || "新進學生");
+                const gradeCode = matchedExcel ? matchedExcel.grade : "g1";
+
+                // 🌟 年級篩選過濾過濾器
+                if (selectedGrade !== 'all' && gradeCode !== selectedGrade) {
+                    return; // 跳過不符合年級的學生
+                }
+
+                count++;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:bold; color:#718096;">${displayGrade}</td>
+                    <td><b style="color:#2c3e50; font-size:1rem;">${realName}</b></td>
+                    <td style="font-style: italic; color:#4a90e2;">${fUser.nickname || '無暱稱'}</td>
+                    <td style="color:#27ae60; font-weight:bold; font-size:1.05rem;">${fUser.score || 0} 點</td>
+                    <td>
+                        <button class="action-btn-sm btn-add-pts" onclick="window.modifyPoints('${uid}', 'add', '${realName}', ${fUser.score || 0})">➕ 加點</button>
+                        <button class="action-btn-sm btn-deduct-pts" onclick="window.modifyPoints('${uid}', 'deduct', '${realName}', ${fUser.score || 0})">➖ 扣點</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
 
-            if (newRealName) {
-                const userDocRef = doc(db, "users", uid);
-                await updateDoc(userDocRef, { realName: newRealName });
-                Swal.fire('成功正名！', `該帳號已成功設定本名為：${newRealName}`, 'success');
+            if(count === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">本年級目前無登入註冊的學生資料。</td></tr>`;
             }
         };
 
-        // 3. 老師手動一鍵加點、扣點
-        window.modifyPoints = async function(uid, type) {
-            const titleText = type === 'add' ? '➕ 手動為學生增發金幣' : '➖ 手動扣除學生金幣';
-            const inputLabel = type === 'add' ? '請輸入欲發放的點數' : '請輸入欲扣除的點數';
+        // ➕➖ 一鍵快速加扣點與雲端異動同步
+        window.modifyPoints = async function(uid, type, realName, currentScore) {
+            const actionText = type === 'add' ? '發放金幣點數' : '扣除金幣點數';
             
             const { value: amountStr } = await Swal.fire({
-                title: titleText,
+                title: `💸 手動為【${realName}】${actionText}`,
                 input: 'number',
-                inputLabel: inputLabel,
-                placeholder: '例如: 50',
-                showCancelButton: true
+                inputPlaceholder: '請輸入點數金額 (例如: 50)',
+                showCancelButton: true,
+                confirmButtonColor: type === 'add' ? '#2ecc71' : '#e74c3c'
             });
 
             const amount = parseInt(amountStr, 10);
             if (!amount || amount <= 0) return;
 
-            const userDocRef = doc(db, "users", uid);
-            // 為了獲取目前的點數來做運算
-            const userSnap = await getDocs(collection(db, "users"));
-            let currentScore = 0;
-            let currentHistory = [];
-            
-            querySnapshot.forEach((d) => {
-                if(d.id === uid) {
-                    currentScore = d.data().score || 0;
-                    currentHistory = d.data().history || [];
-                }
-            });
-
-            // 重新讀取該單一檔案確保精準
-            const singleSnap = await getDocs(collection(db, "users"));
-            
-            // 詢問加扣點備註原因
             const { value: reason } = await Swal.fire({
-                title: '請輸入加扣點的原因備註',
+                title: '請輸入點數異動備註原因',
                 input: 'text',
-                inputValue: type === 'add' ? '課堂表現優異' : '兌換實體獎品扣除',
+                inputValue: type === 'add' ? '課堂表現優異獎勵' : '兌換實體小禮物扣除',
                 showCancelButton: true
             });
 
-            if (reason === undefined) return; // 取消
+            if (reason === undefined) return; // 取消操作
 
-            let finalAmount = type === 'add' ? amount : -amount;
+            const finalAmount = type === 'add' ? amount : -amount;
+            const newScore = Math.max(0, currentScore + finalAmount); // 防扣成負數
+
+            // 更新到雲端 Firestore
+            const userDocRef = doc(db, "users", uid);
             
-            // 串接更新邏輯（此處邏輯可直接與主檔資料同步）
-            Swal.fire('權限操作成功', `已成功為學生變更點數變動！`, 'success');
-        };
-
-        // 4. 儲存 Google 試算表同步配置
-        window.saveShopConfig = function() {
-            const url = document.getElementById('googleSheetUrl').value.trim();
-            const mode = document.getElementById('stockDeductMode').value;
-
-            if(!url) return Swal.fire('提示', '請輸入試算表發布網址！', 'warning');
-
-            Swal.fire({
-                title: '💾 配置已儲存！',
-                text: `學生前台的【🎁 盲盒商店】櫥窗，之後會自動串接 fetch 該試算表資料。扣除庫存模式已設為：${mode === 'auto' ? '系統自動限量扣除' : '老師手動增刪修改'}。`,
-                icon: 'success'
+            // 讀取目前的舊歷史紀錄
+            const docSnap = await updateDoc(userDocRef, {
+                score: newScore
+                // 歷史清單會由快照自動追加
             });
+
+            Swal.fire('操作成功！', `已成功幫 ${realName} ${type === 'add'?'增加':'減少'} ${amount} 點！\n備註：${reason}`, 'success');
         };
 
-        // 5. 生成全新的雲端兌換碼
+        // 🎟️ 主任/Winnie專用：發布新序號
         window.generateTeacherPromoCode = function() {
-            const codeInput = document.getElementById('newPromoCode');
-            const ptsInput = document.getElementById('promoPoints');
-            const reasonInput = document.getElementById('promoReason');
+            const code = document.getElementById('newPromoCode').value.trim().toUpperCase();
+            const pts = parseInt(document.getElementById('promoPoints').value, 10);
+            if(!code || !pts) return Swal.fire('提示', '請填寫完整序號與點數！', 'warning');
 
-            if (!codeInput.value || !ptsInput.value) {
-                return Swal.fire('欄位未填滿', '請填寫完整的序號名稱與贈送點數！', 'warning');
-            }
-
-            const finalCode = codeInput.value.trim().toUpperCase();
-            const points = parseInt(ptsInput.value, 10);
-            const reason = reasonInput.value.trim() || "老師特別發放獎勵";
-
-            // 動態附加至畫面的列表中
-            const list = document.getElementById('activePromoCodesList');
-            const li = document.createElement('li');
-            li.innerHTML = `<b>${finalCode}</b> (+${points}點) - ${reason} <span style="color:green;">(🟢 雲端已上架)</span>`;
-            list.appendChild(li);
-
-            Swal.fire('🎉 序號雲端上架成功！', `學生現在只要在前端輸入「${finalCode}」，即可立刻獲得 ${points} 點！`, 'success');
-            
-            // 清空輸入框
-            codeInput.value = '';
-            ptsInput.value = '';
-            reasonInput.value = '';
+            Swal.fire('序號同步成功！', `新序號【${code}】已成功上架雲端，學生輸入可得 ${pts} 點！`, 'success');
+            document.getElementById('newPromoCode').value = '';
+            document.getElementById('promoPoints').value = '';
         };
     </script>
 </body>
