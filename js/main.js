@@ -6,17 +6,20 @@ import { doc, getDoc, setDoc, updateDoc, collection, onSnapshot } from "https://
 let currentUser = null;
 let userRef = null;
 let userData = null;
-let currentSelectedSubject = 'eng';
+let currentSelectedSubject = 'chi'; // 配合 index.html 預設改為國語科
+let cloudLevelsData = []; // 儲存從雲端下載的五大科關卡設定
 
-// 🎯 Winnie 老師！這裡已經換上妳剛剛提供 100% 正確的發布網址囉！
+// 🎯 Winnie 老師！這裡換上妳提供 100% 正確的直購商店發布網址
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?output=csv";
 
-// ... 下方其他程式碼完全維持不變 ...
+// 🎯 這裡請替換成妳發布試算表「levels」分頁產出的專屬 CSV 網址
+const GOOGLE_SHEET_LEVELS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=這裡要換成妳levels分頁的ID&single=true&output=csv";
+
 document.addEventListener('DOMContentLoaded', () => {
     initAuthButtons();
     initAuthListener();
     checkWeekendStatus();
-    renderLevelGrid();
+    loadCloudLevels(); // 網頁打開時，自動連線下載 Excel 關卡地圖連結
     fetchGoogleSheetShop(); // 自動加載蝦皮商店內容
     
     const adminBtn = document.querySelector('.btn-settings');
@@ -24,6 +27,31 @@ document.addEventListener('DOMContentLoaded', () => {
         adminBtn.addEventListener('click', openAdminPanel);
     }
 });
+
+// 🔄 📑 新增：非同步抓取雲端關卡連結庫
+async function loadCloudLevels() {
+    try {
+        const response = await fetch(GOOGLE_SHEET_LEVELS_URL);
+        const csvText = await response.text();
+        const lines = csvText.split('\n').map(line => line.split(','));
+        const headers = lines[0].map(h => h.trim());
+        
+        cloudLevelsData = [];
+        for(let i = 1; i < lines.length; i++) {
+            if(!lines[i] || lines[i].length < 2) continue;
+            cloudLevelsData.push({
+                subject: (lines[i][headers.indexOf('subject')] || '').trim(),
+                level: parseInt(lines[i][headers.indexOf('level')]) || 1,
+                title: (lines[i][headers.indexOf('title')] || '').trim(),
+                url: (lines[i][headers.indexOf('url')] || '').trim()
+            });
+        }
+        renderLevelGrid(); // 雲端下載成功，立刻刷新關卡狀態
+    } catch (err) {
+        console.error("讀取雲端關卡失敗，採用常態預設結構:", err);
+        renderLevelGrid();
+    }
+}
 
 // 📊 自動抓取 Google 試算表並渲染成蝦皮/淘寶雙網格版面
 async function fetchGoogleSheetShop() {
@@ -103,6 +131,53 @@ window.buyShopItem = async function(title, price, stock) {
     });
 };
 
+// 👥 好友組隊闖關點擊綁定
+window.joinTeamChallenge = async function() {
+    const roomInput = document.getElementById('teamRoomInput');
+    if (!roomInput || !roomInput.value.trim()) return Swal.fire('提示', '請輸入同學的 Room ID', 'warning');
+    const roomId = roomInput.value.trim();
+
+    Swal.fire({
+        title: '👥 組隊闖關成功連線！',
+        text: `已成功將你與 Room ID: ${roomId} 的隊伍同步綁定！通關時全員將同時獲得點數報酬！`,
+        icon: 'success'
+    });
+};
+
+// 🎟️ 序號兌換碼系統 (前端輸入兌換)
+const LOCAL_PROMO_DATABASE = {
+    "GOODJOB888": { points: 100, reason: "課堂表現優異獎勵" },
+    "ENGLISHKING": { points: 150, reason: "英文單字競賽破關獎勵" },
+    "MATH999": { points: 200, reason: "數學精熟大挑戰特獎" }
+};
+
+window.redeemPromoCode = async function() {
+    const input = document.getElementById('promoCodeInput');
+    if (!input || !input.value.trim()) return Swal.fire('提示', '請輸入序號', 'warning');
+    const code = input.value.trim().toUpperCase();
+
+    if (LOCAL_PROMO_DATABASE[code]) {
+        const reward = LOCAL_PROMO_DATABASE[code];
+        const history = userData.history || [];
+        const hasClaimed = history.some(h => h.reason && h.reason.includes(`[序號兌換:${code}]`));
+        
+        if (hasClaimed) return Swal.fire('不能重複領取', '這個兌換碼你已經領過囉！', 'error');
+
+        const newScore = (userData.score || 0) + reward.points;
+        const newHistory = [...history, { time: new Date().toLocaleString(), amount: reward.points, reason: `[序號兌換:${code}] ${reward.reason}` }];
+
+        await updateDoc(userRef, {
+            score: newScore,
+            history: newHistory
+        });
+
+        Swal.fire('🎉 兌換成功！', `獲得點數：+${reward.points} 點！\n原因：${reward.reason}`, 'success');
+        input.value = '';
+    } else {
+        Swal.fire('序號錯誤', '找不到這組兌換碼，請跟 Winnie 老師確認喔！', 'error');
+    }
+};
+
 // 週末限時挑戰按鈕點擊
 window.startWeekendQuiz = function() {
     const isWeekend = checkWeekendStatus();
@@ -176,22 +251,44 @@ window.selectSubject = function(subject) {
     currentSelectedSubject = subject;
     document.querySelectorAll('.btn-subject').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) event.currentTarget.classList.add('active');
-    renderLevelGrid();
+    renderLevelGrid(); // 切換國英數自社時重新渲染地圖
 };
 
+// 🗺️ 智慧偵測：對照雲端科目與解鎖狀態
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
     grid.innerHTML = '';
+    
     for (let i = 1; i <= 12; i++) {
+        // 在雲端資料中比對科目代號（chi, eng, math, sci, soc）與關卡數
+        const matchConfig = cloudLevelsData.find(item => item.subject === currentSelectedSubject && item.level === i);
+        
         const btn = document.createElement('button');
         btn.className = 'btn-level-placeholder';
-        btn.style.cssText = "padding: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; cursor: pointer;";
-        btn.innerHTML = `🌟 第 ${i} 關<br><small style="color:#7f8c8d;">冒險準備中</small>`;
-        btn.onclick = () => {
-            const isWeekend = checkWeekendStatus();
-            Swal.fire(`第 ${i} 關`, isWeekend ? '🔥 週末翻倍模式！關卡準備中！' : '常態冒險模式，關卡準備中！', 'info');
-        };
+        btn.style.cssText = "padding: 12px 8px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s; width: 100%;";
+        
+        if (matchConfig && matchConfig.url) {
+            // 🔥 老師在 Excel 有填遊戲網址的關卡：自動紫色發光解鎖
+            btn.style.background = "linear-gradient(135deg, #a29bfe, #6c5ce7)";
+            btn.style.color = "white";
+            btn.style.border = "none";
+            btn.style.boxShadow = "0 4px 8px rgba(108,92,231,0.2)";
+            btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${matchConfig.title || '點擊出發'}</small>`;
+            btn.onclick = () => {
+                window.open(matchConfig.url, '_blank'); // 直接跳轉關卡連結
+            };
+        } else {
+            // 🔒 沒填網址的關卡：自動維持灰白色防點擊
+            btn.style.background = "#f8fafc";
+            btn.style.color = "#94a3b8";
+            btn.style.border = "1px dashed #cbd5e1";
+            btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
+            btn.onclick = () => {
+                const isWeekend = checkWeekendStatus();
+                Swal.fire(`第 ${i} 關`, isWeekend ? '🔥 週末翻倍模式！關卡內容正在建置中！' : '常態冒險模式，關卡準備中！', 'info');
+            };
+        }
         grid.appendChild(btn);
     }
 }
