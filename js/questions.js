@@ -24,3 +24,8 @@ export const DAILY_QUESTIONS = [
         points: 20
     }
 ];
+
+const today = new Date();
+const isWeekend = (today.getDay() === 0 || today.getDay() === 6); // 0是週日，6是週六
+const basePoints = 10;
+const finalPoints = isWeekend ? basePoints * 2 : basePoints;
