@@ -12,13 +12,16 @@ let excelUsersDatabase = [];
 
 // 🎯 Winnie 老師的 Google 試算表 CSV 網址對接
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?output=csv";
-// 修正：將 levels 分頁對接至全文件最安全的 students 同步 ID，避免跨分頁 gid 錯誤
-const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=204098901&single=true&output=csv";
+const GOOGLE_SHEET_LEVELS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=583344199&single=true&output=csv"; 
+
+// 🌟 這裡已經換上妳剛剛取得的「絕對正確」students 分頁專屬網址！
+const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=485295361&single=true&output=csv";
 
 document.addEventListener('DOMContentLoaded', () => {
     loadExcelCredentials(); 
     initAuthButtons();
     checkWeekendStatus();
+    loadCloudLevels();
     fetchGoogleSheetShop(); 
     
     const adminBtn = document.querySelector('.btn-settings');
@@ -32,7 +35,6 @@ async function loadExcelCredentials() {
     try {
         const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
         const csvText = await response.text();
-        // 修正：防範換行字元造成多餘空白列，精準切分欄位
         const lines = csvText.split(/\r?\n/).map(line => line.split(','));
         const headers = lines[0].map(h => h.trim());
         
@@ -55,13 +57,11 @@ async function loadExcelCredentials() {
 function initAuthButtons() {
     const btnLogin = document.getElementById('btnLogin');
     const btnGuest = document.getElementById('btnGuest');
-    
     if (btnLogin) btnLogin.onclick = () => loginUser();
-    // 3. 完美對接遊客登入按鈕
     if (btnGuest) btnGuest.onclick = () => loginAsGuest();
 }
 
-// 🔑 1. 精準對照 Excel 登入機制
+// 🔑 精準對照 Excel 登入機制
 async function loginUser() {
     const emailInput = document.getElementById('emailInput');
     const passwordInput = document.getElementById('passwordInput');
@@ -79,7 +79,7 @@ async function loginUser() {
     
     if (errorEl) errorEl.innerText = "雲端數據驗證中...";
 
-    // 精準比對
+    // 🔍 對照 Excel 名冊
     const matchedUser = excelUsersDatabase.find(u => u.email === email && u.password === password);
 
     if (matchedUser) {
@@ -90,11 +90,10 @@ async function loginUser() {
     }
 }
 
-// 🔑 3. 訪客匿名免登入試玩核心
+// 👻 訪客匿名試玩
 async function loginAsGuest() {
     const errorEl = document.getElementById('loginError');
-    if (errorEl) errorEl.innerText = "正在以遊客身分建立臨時檔案...";
-    
+    if (errorEl) errorEl.innerText = "建立臨時檔案中...";
     try {
         const credential = await signInAnonymously(auth);
         const guestUid = "guest_" + credential.user.uid.substring(0, 8);
@@ -104,14 +103,13 @@ async function loginAsGuest() {
     }
 }
 
-// 🚀 通過驗證，放行並刷新排版
+// 🚀 通過驗證放行
 async function enterSystem(userCleanId, realName) {
     const loginOverlay = document.getElementById('loginOverlay');
     const mainContainer = document.getElementById('mainAppContainer');
     
     userRef = doc(db, "users", userCleanId);
     
-    // 2. 驗證通過，完全隱藏遮罩，優雅秀出前台漂亮排版
     if (loginOverlay) loginOverlay.style.display = 'none';
     if (mainContainer) mainContainer.style.display = 'block';
     
@@ -126,7 +124,7 @@ async function enterSystem(userCleanId, realName) {
             avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`,
             score: 100,
             liquidBalance: 0,
-            history: [{ time: new Date().toLocaleString(), amount: 100, reason: "HAGO 系統啟用獎勵" }]
+            history: [{ time: new Date().toLocaleString(), amount: 100, reason: "系統啟用獎勵" }]
         };
         await setDoc(userRef, initialData);
         userData = initialData;
@@ -158,20 +156,52 @@ function updateStudentUI() {
     if (avatar && userData.avatarUrl) avatar.src = userData.avatarUrl;
 }
 
-// 🔄 讀取常態本地 1~12 關
+// 🔄 讀取關卡連結
+async function loadCloudLevels() {
+    try {
+        const response = await fetch(GOOGLE_SHEET_LEVELS_URL);
+        const csvText = await response.text();
+        const lines = csvText.split('\n').map(line => line.split(','));
+        const headers = lines[0].map(h => h.trim());
+        
+        cloudLevelsData = [];
+        for(let i = 1; i < lines.length; i++) {
+            if(!lines[i] || lines[i].length < 2) continue;
+            cloudLevelsData.push({
+                subject: (lines[i][headers.indexOf('subject')] || '').trim(),
+                level: parseInt(lines[i][headers.indexOf('level')]) || 1,
+                title: (lines[i][headers.indexOf('title')] || '').trim(),
+                url: (lines[i][headers.indexOf('url')] || '').trim()
+            });
+        }
+    } catch (err) {
+        console.error("關卡資料加載失敗:", err);
+    }
+}
+
+// 🗺️ 渲染關卡矩陣
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
     grid.innerHTML = '';
     
     for (let i = 1; i <= 12; i++) {
+        const matchConfig = cloudLevelsData.find(item => item.subject === currentSelectedSubject && item.level === i);
         const btn = document.createElement('button');
         btn.className = 'btn-level-placeholder';
-        btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
-        btn.onclick = () => {
-            const isWeekend = checkWeekendStatus();
-            Swal.fire(`第 ${i} 關`, isWeekend ? '🔥 週末雙倍副本！本關題庫導師正在建置中～' : '常態冒險模式，關卡內容調整中！', 'info');
-        };
+        
+        if (matchConfig && matchConfig.url) {
+            btn.style.cssText = "padding: 12px 8px; border-radius: 10px; cursor: pointer; font-weight: bold; background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; border: none; box-shadow: 0 4px 8px rgba(108,92,231,0.2);";
+            btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${matchConfig.title || '點擊出發'}</small>`;
+            btn.onclick = () => { window.open(matchConfig.url, '_blank'); };
+        } else {
+            btn.className = 'btn-level-placeholder'; 
+            btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
+            btn.onclick = () => {
+                const isWeekend = checkWeekendStatus();
+                Swal.fire(`第 ${i} 關`, isWeekend ? '🔥 週末雙倍副本！本關題庫導師正在建置中～' : '常態冒險模式，關卡內容調整中！', 'info');
+            };
+        }
         grid.appendChild(btn);
     }
 }
@@ -203,7 +233,7 @@ async function fetchGoogleSheetShop() {
                             <span style="font-size:0.7rem; color:#718096; background:#edf2f7; padding:2px 4px; border-radius:4px;">庫存:${stock}</span>
                         </div>
                     </div>
-                    <button onclick="buyShopItem('${title}', ${price}, ${stock})" ${stock <= 0 ? 'disabled' : ''} style="width:100%; margin-top:8px; padding:6px; background:${stock <= 0 ? '#b2bec3' : '#ff9f43'}; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.8rem;">
+                    <button onclick="buyShopItem('${title}', ${price}, ${stock})" ${stock <= 0 ? 'disabled' : ''} style="width:100%; margin-top:8px; padding:6px; background:${stock <= 0 ? '#b2bec3' : '#00b894'}; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.8rem;">
                         ${stock <= 0 ? '已售完' : '立即直購'}
                     </button>
                 </div>
@@ -256,11 +286,48 @@ function checkWeekendStatus() {
     return isWeekend;
 }
 
+// 🎟️ 序號兌換系統
+const LOCAL_PROMO_DATABASE = {
+    "GOODJOB888": { points: 100, reason: "課堂表現優異" },
+    "ENGLISHKING": { points: 150, reason: "英文單字比賽獲勝" },
+    "MATH999": { points: 200, reason: "數學挑戰特獎" }
+};
+
+window.redeemPromoCode = async function() {
+    const input = document.getElementById('promoCodeInput');
+    if (!input || !input.value.trim()) return Swal.fire('提示', '請輸入序號', 'warning');
+    const code = input.value.trim().toUpperCase();
+
+    if (LOCAL_PROMO_DATABASE[code]) {
+        const reward = LOCAL_PROMO_DATABASE[code];
+        const history = userData.history || [];
+        if (history.some(h => h.reason && h.reason.includes(`[序號兌換:${code}]`))) {
+            return Swal.fire('不能重複領取', '這個兌換碼你已經領過囉！', 'error');
+        }
+
+        const newScore = (userData.score || 0) + reward.points;
+        const newHistory = [...history, { time: new Date().toLocaleString(), amount: reward.points, reason: `[序號兌換:${code}] ${reward.reason}` }];
+
+        await updateDoc(userRef, { score: newScore, history: newHistory });
+        Swal.fire('🎉 兌換成功！', `獲得點數：+${reward.points} 點！`, 'success');
+        input.value = '';
+    } else {
+        Swal.fire('序號錯誤', '找不到這組兌換碼，請跟導師確認喔！', 'error');
+    }
+};
+
+window.startWeekendQuiz = function() {
+    if (checkWeekendStatus()) Swal.fire('⚔️ 限時副本開啟！', '週末題目獲得點數自動翻倍！', 'success');
+    else Swal.fire('未到開啟時間', '週末才會限時開放隱藏題庫喔！', 'info');
+};
+
 window.joinTeamChallenge = function() {
     const val = document.getElementById('teamRoomInput').value.trim();
     if(!val) return Swal.fire('提示', '請輸入 Room ID', 'warning');
     Swal.fire('👥 綁定成功', `已成功加入房間：${val}，組隊通關將獲得倍率加成！`, 'success');
 };
+
+window.submitPost = function() { Swal.fire('開發中', '校園廣場留言功能即將開放！', 'info'); };
 
 async function openAdminPanel() {
     const { value: teacherId } = await Swal.fire({
