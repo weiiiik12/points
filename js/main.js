@@ -301,17 +301,43 @@ window.switchTab = function(tabId) {
     if (event && event.currentTarget) event.currentTarget.classList.add('active');
 };
 
+// 🔐 導師安全認證系統 (支援多導師專屬固定 ID 登入)
 async function openAdminPanel() {
-    const { value: password } = await Swal.fire({
-        title: '🔑 老師安全認證',
+    const { value: teacherId } = await Swal.fire({
+        title: '🔑 導師安全認證',
         input: 'password',
-        inputPlaceholder: '請輸入 Winnie 老師的後台管理密碼',
-        showCancelButton: true
+        inputLabel: '請輸入您的專屬導師固定 ID',
+        inputPlaceholder: '請輸入老師的後台管理金鑰...',
+        showCancelButton: true,
+        confirmButtonColor: '#2c3e50'
     });
-    if (password === "winnie888") {
-        window.location.href = 'admin.html';
-    } else if (password) {
-        Swal.fire('認證失敗', '密碼不正確喔！', 'error');
+
+    // 🎟️ 補習班導師團隊專屬固定 ID 配置清單
+    const TEACHER_REGISTRY = {
+        "winnie888": "Winnie 老師",
+        "tiffany777": "Tiffany 老師",
+        "andrea666": "Andrea 老師",
+        "katrina555": "Katrina 老師",
+        "kelly444": "Kelly 老師"
+    };
+
+    if (teacherId && TEACHER_REGISTRY[teacherId]) {
+        const teacherName = TEACHER_REGISTRY[teacherId];
+        
+        // 將當前登入的老師名字暫存到瀏覽器，等一下 admin.html 可以直接抓取顯示！
+        localStorage.setItem('activeTeacherName', teacherName);
+
+        Swal.fire({
+            title: '🛠️ 權限認證成功',
+            text: `歡迎登入系統，${teacherName}！正在為您開啟雲端管理面板...`,
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            window.location.href = 'admin.html'; // 順暢前往獨立後台
+        });
+    } else if (teacherId) {
+        Swal.fire('認證失敗', '找不到此導師 ID，請向 Winnie 老師確認權限金鑰！', 'error');
     }
 }
 
