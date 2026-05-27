@@ -1,46 +1,82 @@
 :root {
-    --bg-color: #f7f9fc;
-    --primary-color: #4a90e2;
-    --quiz-adventure: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-    --quiz-team: linear-gradient(135deg, #00b894 0%, #55efc4 100%);
-    --quiz-weekend: linear-gradient(135deg, #ff7675 0%, #ef4444 100%);
-    --shopee-orange: #ff9f43;
-    --text-dark: #2d3436;
+    --bg-color: #f0f2f5;
+    --header-bg: #ffffff;
+    --text-color: #333333;
+    --primary: #4a90e2;
+    --success: #00b894;
+    --danger: #d63031;
+    --warning: #f1c40f;
+    --common: #95a5a6; --uncommon: #00b894; --rare: #0984e3;
+    --epic: #6c5ce7; --legendary: #e17055; --mythic: #d63031;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
-    background-color: var(--bg-color); color: var(--text-dark);
-    margin: 0; padding: 0; padding-bottom: 40px;
+    font-family: "PingFang TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color); color: var(--text-color);
+    margin: 0; padding: 0;
+    user-select: none; -webkit-user-select: none;
+    overflow-x: hidden; padding-bottom: 30px;
 }
 
-/* 蝦皮雙網格電商小卡 */
-.shopee-market-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px;
+/* === 登入介面 (置中且乾淨) === */
+#loginOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle, #f8f9fa 0%, #e9ecef 100%);
+    z-index: 9999;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
 }
-.shopee-card {
-    background: white; border: 1px solid #f1f2f6; border-radius: 16px;
-    overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-    display: flex; flex-direction: column; justify-content: space-between;
-    padding: 12px; transition: transform 0.2s;
+.login-card {
+    background: white; padding: 35px 25px; border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    width: 85%; max-width: 360px;
 }
-.shopee-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.05); }
+.login-input {
+    width: 100%; padding: 14px; margin: 8px 0;
+    border: 2px solid #edf2f7; border-radius: 10px;
+    font-size: 1rem; outline: none; transition: 0.3s;
+}
+.login-input:focus { border-color: var(--primary); }
+.btn-group-login { display: flex; gap: 10px; margin-top: 15px; }
+.btn-login { flex: 1; background: #4a90e2; color: white; border: none; padding: 14px; font-size: 1rem; border-radius: 10px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(74,144,226,0.3); }
+.btn-guest { background: #b2bec3; color: white; border: none; padding: 12px; font-size: 0.9rem; border-radius: 50px; cursor: pointer; margin-top: 15px; width: 100%; font-weight: bold; }
 
-/* 科目、功能標籤切換風格 */
-.tab-btn, .btn-subject {
-    background: #f1f5f9; border: none; color: #64748b;
-    padding: 8px 16px; border-radius: 20px; font-weight: bold;
-    cursor: pointer; transition: all 0.2s; white-space: nowrap;
-}
-.tab-btn.active, .btn-subject.active {
-    background: #2d3748; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
+/* === 學生頂部資訊欄 === */
+.user-bar { background: #2d3436; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+.btn-logout { background: #d63031; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold;}
+.header { background: var(--header-bg); padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; border-radius: 0 0 20px 20px;}
+.points-val { font-size: 2.8rem; font-weight: 800; color: #e17055; margin: 5px 0 0 0; line-height: 1.2; }
+.points-label { font-size: 0.9rem; color: #888; font-weight: bold; }
+.btn-filter-opt { background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-filter-opt.active { background: #2d3748; border-color: #2d3748; color: white; }
 
-/* 卡片外殼 */
-.card {
-    background: white; padding: 20px; border-radius: 18px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.03); margin-bottom: 15px;
-    border: 1px solid #edf2f7;
+/* === 主導覽標籤 === */
+.nav { display: flex; background: white; margin: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); padding: 5px; overflow-x: auto; gap: 5px; }
+.nav-btn { flex: 1; padding: 12px 10px; background: none; border: none; color: #888; font-weight: bold; cursor: pointer; border-radius: 8px; transition: all 0.2s; font-size: 0.95rem; white-space: nowrap; }
+.nav-btn.active { background: #dfe6e9; color: #2d3436; }
+.section { display: none; padding: 10px 20px; max-width: 600px; margin: 0 auto; animation: fadeIn 0.3s; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* === 各區塊卡片外殼 === */
+.school-card-box {
+    background: #ffffff; border-radius: 16px; padding: 20px; margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04); position: relative; overflow: hidden; border: 1px solid #eef2f5;
 }
-h2 { font-size: 1.15rem; margin-top: 0; display: flex; align-items: center; gap: 6px; font-weight: 800; }
+.school-badge { position: absolute; top: 0; right: 0; color: white; font-size: 0.75rem; font-weight: bold; padding: 4px 12px; border-bottom-left-radius: 12px; }
+.school-title { margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.school-desc { margin: 0 0 15px 0; font-size: 0.88rem; color: #64748b; line-height: 1.5; }
+.school-input { flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 0.95rem; outline: none; }
+.btn-school-action { width: 100%; padding: 12px 0; font-size: 0.95rem; font-weight: bold; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
+
+/* === 關卡按鈕矩陣 === */
+.level-btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; }
+.btn-level-placeholder { background: #ffffff; border: 2px dashed #cbd5e1; color: #94a3b8; padding: 12px 8px; border-radius: 10px; font-size: 0.82rem; font-weight: bold; cursor: pointer; text-align: center; }
+
+/* === 其他預設按鈕與抽獎按鈕 === */
+.big-btn { width: 100%; padding: 16px; font-size: 1.2rem; font-weight: bold; border-radius: 12px; border: none; background: linear-gradient(135deg, #ff9f43 0%, #ee5253 100%); color: white; box-shadow: 0 4px 10px rgba(238, 82, 83, 0.3); cursor: pointer; }
+.bank-card { background: linear-gradient(135deg, #00b09b, #96c93d); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,176,155,0.3); }
+.bank-rate { font-size: 1.5rem; font-weight: bold; }
+.bank-est { font-size: 1rem; font-weight: bold; background: rgba(255,255,255,0.25); padding: 10px; border-radius: 10px; margin-top: 15px; text-align: center; }
