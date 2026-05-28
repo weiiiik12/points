@@ -47,7 +47,7 @@
 <body>
 
     <nav class="admin-navbar">
-        <div style="font-size: 1.2rem; font-weight: bold;">🎒 皓孩子系統 2.0 | 導師雲端管理後台</div>
+        <div style="font-size: 1.2rem; font-weight: bold;">🎒 🎒 皓孩子系統 2.0 | 導師雲端管理後台</div>
         <div>
             <span id="activeTeacherTitle" style="margin-right: 15px; font-weight: bold; color: #f1c40f;">載入中...</span>
             <button onclick="location.href='index.html'" style="padding: 6px 12px; background: #e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight: bold;">返回學生前台</button>
@@ -270,38 +270,6 @@
             }
         }
 
-        // 🚀 導師點擊「確定派發 Google 表單關卡」時的貼心指引
-        window.submitGoogleFormQuiz = function() {
-            const grade = document.getElementById('uploadGrade').value;
-            const subject = document.getElementById('uploadSubject').value;
-            const level = document.getElementById('uploadLevel').value;
-            const title = document.getElementById('uploadTitle').value.trim();
-            const url = document.getElementById('uploadUrl').value.trim();
-
-            if(!title || !url) {
-                return Swal.fire('欄位未填滿', '請填寫完整的關卡小標題與 Google 表單連結網址！', 'warning');
-            }
-
-            // 因為資料流在 Excel，這裡自動彈出指引通知老師複製
-            Swal.fire({
-                title: '🎉 關卡配置就緒！',
-                html: `請老師將以下資訊填入 Google 試算表的 <b>levels</b> 分頁中：<br><br>` +
-                      `<div style="text-align:left; background:#f1f2f6; padding:10px; border-radius:8px; font-family:monospace; font-size:0.85rem;">` +
-                      `• subject: <b style="color:#e74c3c;">${subject}</b><br>` +
-                      `• level: <b style="color:#e74c3c;">${level}</b><br>` +
-                      `• title: <b style="color:#e74c3c;">[${grade.toUpperCase()}] ${title}</b><br>` +
-                      `• url: <span style="font-size:0.75rem; color:#3498db; word-break:break-all;">${url}</span><br>` +
-                      `• teacher: <b>${currentTeacher}</b>` +
-                      `</div><br>` +
-                      `<small style="color:#2ecc71; font-weight:bold;">填入後學生前台立即生效，並自動啟用「隨機抽題」機制！</small>`,
-                icon: 'success'
-            });
-
-            // 清空欄位
-            document.getElementById('uploadTitle').value = '';
-            document.getElementById('uploadUrl').value = '';
-        };
-
         async function loadExcelStudents() {
             try {
                 const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
@@ -409,6 +377,38 @@
 
         window.generateTeacherPromoCode = function() {
             Swal.fire('序號同步成功！', `新序號已成功上架雲端！`, 'success');
+        };
+
+        // 🚀 ✨ 【關鍵修正補齊】明確定義 submitGoogleFormQuiz，100% 啟動點數與題庫彈窗指引！
+        window.submitGoogleFormQuiz = function() {
+            const grade = document.getElementById('uploadGrade').value;
+            const subject = document.getElementById('uploadSubject').value;
+            const level = document.getElementById('uploadLevel').value;
+            const title = document.getElementById('uploadTitle').value.trim();
+            const url = document.getElementById('uploadUrl').value.trim();
+
+            if(!title || !url) {
+                return Swal.fire('欄位未填滿', '請填寫完整的關卡小標題與 Google 表單連結網址！', 'warning');
+            }
+
+            // 彈出貼心的登記防呆指引彈窗
+            Swal.fire({
+                title: '🎉 關卡配置就緒！',
+                html: `請老師將以下資訊填入 Google 試算表的 <b>levels</b> 分頁中：<br><br>` +
+                      `<div style="text-align:left; background:#f1f2f6; padding:10px; border-radius:8px; font-family:monospace; font-size:0.85rem; line-height:1.6;">` +
+                      `• subject: <b style="color:#e74c3c;">${subject}</b><br>` +
+                      `• level: <b style="color:#e74c3c;">${level}</b><br>` +
+                      `• title: <b style="color:#e74c3c;">[${grade.toUpperCase()}] ${title}</b><br>` +
+                      `• url: <span style="font-size:0.75rem; color:#3498db; word-break:break-all;">${url}</span><br>` +
+                      `• teacher: <b>${currentTeacher}</b>` +
+                      `</div><br>` +
+                      `<small style="color:#2ecc71; font-weight:bold;">填入試算表後學生前台立即生效，並自動啟用「隨機抽題」機制！</small>`,
+                icon: 'success'
+            });
+
+            // 填完自動清空輸入框，方便老師出下一題
+            document.getElementById('uploadTitle').value = '';
+            document.getElementById('uploadUrl').value = '';
         };
     </script>
 </body>
