@@ -6,7 +6,7 @@ import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.
 let currentUser = null;
 let userRef = null;
 let userData = null;
-let currentSelectedSubject = 'chi'; // 預設為國語科
+let currentSelectedSubject = 'chi'; // 配合 index.html 預設為國語
 let cloudLevelsData = []; // 儲存全校導師上傳的 Google 表單題庫陣列
 let excelUsersDatabase = []; // 儲存全校學生帳密名冊
 
@@ -25,13 +25,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAuthButtons();
     checkWeekendStatus();
     loadCloudLevels(); // 載入雲端多導師 Google 表單題庫庫
-    fetchGoogleSheetShop(); 
+    fetchGoogleSheetShop(); // 執行超強防呆商店載入
     
     const adminBtn = document.querySelector('.btn-settings');
     if (adminBtn) {
         adminBtn.addEventListener('click', openAdminPanel);
     }
 });
+
+// 🛡️ 智能 CSV 安全解析核心器 (防止圖片網址或內容有逗號導致破版)
+function parseCSVLineSafely(text) {
+    let p = '', r = [];
+    let q = false;
+    for (let i = 0; i < text.length; i++) {
+        let c = text[i];
+        if (c === '"') { q = !q; }
+        else if (c === ',' && !q) { r.push(p); p = ''; }
+        else { p += c; }
+    }
+    r.push(p);
+    return r;
+}
 
 // 🛡️ 遊客權限檢查器
 function checkGuestPermission() {
@@ -47,19 +61,23 @@ async function loadExcelCredentials() {
     try {
         const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
         const csvText = await response.text();
-        const lines = csvText.split(/\r?\n/).map(line => line.split(','));
-        const headers = lines[0].map(h => h.trim());
+        const rawLines = csvText.split(/\r?\n/);
+        const headers = parseCSVLineSafely(rawLines[0]).map(h => h.trim());
         
         excelUsersDatabase = [];
-        for(let i = 1; i < lines.length; i++) {
-            if(!lines[i] || lines[i].length < 2 || lines[i][0] === "") continue;
+        for(let i = 1; i < rawLines.length; i++) {
+            if(!rawLines[i] || rawLines[i].trim() === "") continue;
+            const cols = parseCSVLineSafely(rawLines[i]);
+            if (cols.length < 2) continue;
+            
             excelUsersDatabase.push({
-                email: (lines[i][headers.indexOf('email')] || '').trim().toLowerCase(),
-                password: (lines[i][headers.indexOf('password')] || '').trim(),
-                realName: (lines[i][headers.indexOf('realName')] || '未命名').trim(),
-                grade: (lines[i][headers.indexOf('grade')] || 'g1').trim().toLowerCase()
+                email: (cols[headers.indexOf('email')] || '').trim().toLowerCase(),
+                password: (cols[headers.indexOf('password')] || '').trim(),
+                realName: (cols[headers.indexOf('realName')] || '未命名').trim(),
+                grade: (cols[headers.indexOf('grade')] || 'g1').trim().toLowerCase()
             });
         }
+        console.log("Excel 學生庫同步完成，共計：" + excelUsersDatabase.length + " 筆。");
     } catch (err) {
         console.error("預載帳密失敗:", err);
     }
@@ -218,17 +236,19 @@ async function loadCloudLevels() {
     try {
         const response = await fetch(GOOGLE_SHEET_LEVELS_URL);
         const csvText = await response.text();
-        const lines = csvText.split(/\r?\n/).map(line => line.split(','));
-        const headers = lines[0].map(h => h.trim());
+        const rawLines = csvText.split(/\r?\n/);
+        const headers = parseCSVLineSafely(rawLines[0]).map(h => h.trim().toLowerCase());
         
         cloudLevelsData = [];
-        for(let i = 1; i < lines.length; i++) {
-            if(!lines[i] || lines[i].length < 2 || lines[i][0] === "") continue;
+        for(let i = 1; i < rawLines.length; i++) {
+            if(!rawLines[i] || rawLines[i].trim() === "") continue;
+            const cols = parseCSVLineSafely(rawLines[i]);
+            
             cloudLevelsData.push({
-                subject: (lines[i][headers.indexOf('subject')] || '').trim().toLowerCase(),
-                level: parseInt(lines[i][headers.indexOf('level')]) || 1,
-                title: (lines[i][headers.indexOf('title')] || '').trim(),
-                url: (lines[i][headers.indexOf('url')] || '').trim()
+                subject: (cols[headers.indexOf('subject')] || '').trim().toLowerCase(),
+                level: parseInt(cols[headers.indexOf('level')]) || 1,
+                title: (cols[headers.indexOf('title')] || '').trim(),
+                url: (cols[headers.indexOf('url')] || '').trim()
             });
         }
         renderLevelGrid();
@@ -237,24 +257,19 @@ async function loadCloudLevels() {
     }
 }
 
-// 🗺️ 升級版：支援多表單隨機抽題演算的關卡矩陣
+// 🗺️ 支援多表單隨機抽題的關卡地圖
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
     grid.innerHTML = '';
     
-    // 取得當前正式學生的年級代號 (遊客預設為一年的 g1)
     const currentGradeCode = (userData && userData.email) ? 
         (excelUsersDatabase.find(u => u.email === localStorage.getItem('hago_logged_in_email'))?.grade || 'g1') : 'g1';
 
     for (let i = 1; i <= 12; i++) {
-        // 🔍 篩選：篩選出所有符合「當前學科」且「當前關卡數字」的雲端題庫名單
         const allMatchedQuizzes = cloudLevelsData.filter(item => item.subject === currentSelectedSubject && item.level === i);
-        
-        // 🔍 進階過濾：如果在 title 裡面有包含年級標記（如：[G1] 或 g1），則優先進行年級配對
         let finalQuizzesPool = allMatchedQuizzes.filter(item => item.title.toLowerCase().includes(currentGradeCode));
         
-        // 如果該關卡沒有特定區分年級，就直接使用該科目該關卡的所有表單作為備用池
         if (finalQuizzesPool.length === 0) {
             finalQuizzesPool = allMatchedQuizzes;
         }
@@ -263,24 +278,16 @@ function renderLevelGrid() {
         btn.className = 'btn-level-placeholder';
         
         if (finalQuizzesPool.length > 0 && finalQuizzesPool[0].url) {
-            // 🔥 只要有導師上傳過表單，關卡按鈕就會點亮！
             btn.style.cssText = "padding: 12px 8px; border-radius: 10px; cursor: pointer; font-weight: bold; background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; border: none; box-shadow: 0 4px 8px rgba(108,92,231,0.2);";
-            
-            // 秀出關卡地圖上的小標題
             const displayTitle = finalQuizzesPool[0].title.replace(new RegExp(`\\[${currentGradeCode.toUpperCase()}\\]`, 'gi'), '').trim();
             btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${displayTitle || '進入挑戰'}</small>`;
             
             btn.onclick = () => { 
-                if (!checkGuestPermission()) return; // 阻擋遊客
-                
-                // 🎲 核心機制：從符合條件的表單池中，自動進行「隨機抽題」
+                if (!checkGuestPermission()) return; 
                 const randomQuizIdx = Math.floor(Math.random() * finalQuizzesPool.length);
-                const chosenQuizFormUrl = finalQuizzesPool[randomQuizIdx].url;
-                
-                window.open(chosenQuizFormUrl, '_blank'); // 彈出被隨機抽到的 Google 表單！
+                window.open(finalQuizzesPool[randomQuizIdx].url, '_blank'); 
             };
         } else {
-            // 🔒 沒表單就維持虛線灰色鎖定
             btn.className = 'btn-level-placeholder'; 
             btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
             btn.onclick = () => {
@@ -292,7 +299,7 @@ function renderLevelGrid() {
     }
 }
 
-// 📊 抓取商店商品 (升級版：支援自動標題容錯與對號入座，完美刷出皓晟獎點櫃)
+// 📊 抓取商店商品 (超級自動容錯與智能欄位配對版)
 async function fetchGoogleSheetShop() {
     const shopGrid = document.getElementById('googleSheetShopGrid');
     if (!shopGrid) return;
@@ -300,11 +307,11 @@ async function fetchGoogleSheetShop() {
         const response = await fetch(GOOGLE_SHEET_CSV_URL);
         const csvText = await response.text();
         
-        // 1. 精準切分每一行與每一格，並去除多餘的空白
-        const lines = csvText.split(/\r?\n/).map(line => line.split(','));
-        const headers = lines[0].map(h => h.trim().toLowerCase()); // 全部轉小寫防呆
+        // 1. 使用安全解析器拆分行與格
+        const rawLines = csvText.split(/\r?\n/);
+        const headers = parseCSVLineSafely(rawLines[0]).map(h => h.trim().toLowerCase());
         
-        // 2. 智慧型尋找欄位索引 (不論妳 Excel 寫英文或中文、有大寫或小寫都能通)
+        // 2. 欄位自動對號入座
         const titleIdx = headers.findIndex(h => h.includes('title') || h.includes('name') || h.includes('名稱') || h.includes('商品'));
         const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('cost') || h.includes('點數') || h.includes('價格') || h.includes('價錢'));
         const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('count') || h.includes('庫存') || h.includes('數量'));
@@ -313,24 +320,22 @@ async function fetchGoogleSheetShop() {
         let html = '';
         let validItemCount = 0;
 
-        // 3. 從第二行開始巡邏商品
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i] || lines[i].length < 2 || lines[i][0] === "") continue;
+        for (let i = 1; i < rawLines.length; i++) {
+            if (!rawLines[i] || rawLines[i].trim() === "") continue;
+            const cols = parseCSVLineSafely(rawLines[i]);
+            if (cols.length < 2) continue;
             
-            // 安全提取資料，若找不到對應欄位就使用預設值
-            const title = (titleIdx !== -1 && lines[i][titleIdx]) ? lines[i][titleIdx].trim() : '神祕驚喜小禮物';
-            const price = (priceIdx !== -1 && lines[i][priceIdx]) ? parseInt(lines[i][priceIdx].trim(), 10) || 100 : 100;
-            const stock = (stockIdx !== -1 && lines[i][stockIdx]) ? parseInt(lines[i][stockIdx].trim(), 10) || 0 : 0;
-            let imgUrl = (imgIdx !== -1 && lines[i][imgIdx]) ? lines[i][imgIdx].trim() : 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
+            const title = (titleIdx !== -1 && cols[titleIdx]) ? cols[titleIdx].trim() : '神祕小禮物';
+            const price = (priceIdx !== -1 && cols[priceIdx]) ? parseInt(cols[priceIdx].trim(), 10) || 50 : 50;
+            const stock = (stockIdx !== -1 && cols[stockIdx]) ? parseInt(cols[stockIdx].trim(), 10) || 0 : 0;
+            let imgUrl = (imgIdx !== -1 && cols[imgIdx]) ? cols[imgIdx].trim() : 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
 
-            // 防呆：如果圖片網址為空，給一張預設禮物圖
             if (!imgUrl || imgUrl === "" || !imgUrl.startsWith('http')) {
                 imgUrl = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
             }
 
             validItemCount++;
 
-            // 完美對接 index.html 裡的仿蝦皮雙網格小卡片
             html += `
                 <div class="shopee-card" style="background:#fff; border:1px solid #edf2f7; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; padding:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                     <img src="${imgUrl}" style="width:100%; height:110px; object-fit:cover; border-radius:8px;" alt="商品">
@@ -349,13 +354,13 @@ async function fetchGoogleSheetShop() {
         }
 
         if (validItemCount === 0) {
-            shopGrid.innerHTML = `<p style="color:#999; text-align:center; grid-column:span 2; padding:20px;">試算表中目前沒有任何上架物品資料喔！</p>`;
+            shopGrid.innerHTML = `<p style="color:#999; text-align:center; grid-column:span 2; padding:20px;">🛒 商店目前空空如也，等待老師上架中！</p>`;
         } else {
             shopGrid.innerHTML = html;
         }
     } catch (err) {
         console.error("解讀 Google 試算表失敗:", err);
-        shopGrid.innerHTML = `<p style="color:#ef4444; text-align:center; grid-column:span 2; padding:20px;">⚠️ 皓晟獎點櫃連線失敗，請檢查網路或聯絡 Winnie 老師。</p>`;
+        shopGrid.innerHTML = `<p style="color:#ef4444; text-align:center; grid-column:span 2; padding:20px;">⚠️ 皓晟獎點櫃解析失敗，請檢查 Excel 資料格式是否正確。</p>`;
     }
 }
 
