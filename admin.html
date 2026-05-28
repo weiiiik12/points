@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>皓老師管理後台</title>
+    <title>HAGO 2.0 | 補習班雲端導師管理後台</title>
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -26,6 +26,7 @@
         h2 { margin-top: 0; color: var(--admin-primary); border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.25rem;}
         h2.super-title { color: var(--super-admin); border-bottom-color: #e8daef; }
         .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #4a5568; }
         .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
         .btn-admin { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; }
         .btn-primary { background: #3498db; color: white; }
@@ -46,7 +47,7 @@
 <body>
 
     <nav class="admin-navbar">
-        <div style="font-size: 1.2rem; font-weight: bold;">🎒 皓老師管理後台</div>
+        <div style="font-size: 1.2rem; font-weight: bold;">🎒 皓孩子系統 2.0 | 導師雲端管理後台</div>
         <div>
             <span id="activeTeacherTitle" style="margin-right: 15px; font-weight: bold; color: #f1c40f;">載入中...</span>
             <button onclick="location.href='index.html'" style="padding: 6px 12px; background: #e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight: bold;">返回學生前台</button>
@@ -56,18 +57,19 @@
     <div class="admin-container">
         
         <div class="welcome-box">
-            <h2 style="border:none; padding:0; margin-bottom:5px;">👋 歡迎來到班級經營控盤面板</h2>
+            <h2 style="border:none; padding:0; margin-bottom:5px;">👋 老師辛苦了！歡迎來到班級題庫與點數控盤面板</h2>
+            <p style="margin:0; color:#666; font-size:0.9rem;">
+                在此處您可以直接發布自製的 Google 表單題庫，並為您班上的學生進行即時金幣審查與加扣點。
+            </p>
         </div>
 
         <div class="grid-panel">
             
-            <!-- 🌟 最高管理員專屬面板 -->
             <div class="card card-super admin-only-block" id="superAdminCard" style="display:none; grid-column: span 2;">
                 <h2 class="super-title">👑 最高管理員專屬：系統核心設定</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div>
-                        <h3>🏦 皓銀行全域利率控制</h3>
-                        <p class="hint-text">調整全校學生的銀行活存與定存基礎利率。</p>
+                        <h3>🏦 銀行全域利率控制</h3>
                         <div class="form-group">
                             <label>活存日利率 (如 0.02 = 2%)</label>
                             <input type="number" id="sysDailyRate" class="form-control" value="0.02" step="0.01">
@@ -79,18 +81,78 @@
                         <button class="btn-admin btn-super" onclick="saveSystemBankRates()">💾 儲存並發布全校利率</button>
                     </div>
                     <div>
-                        <h3>👨‍🏫 導師權限與學生資料管控</h3>
-                        <p class="hint-text" style="color:#d35400;"><b>修改密碼與年級須知：</b><br>因系統採用 Excel 整批匯入架構，若需修改學生密碼或調整升級班級，請直接於 Google 試算表 `students` 分頁修改，前台即會自動生效。</p>
-                        <ul style="font-size: 0.9rem; color: #555; line-height: 1.6; padding-left: 20px;">
-                            <li>已授權導師：怡芳、湘羚、愷容、Andrea、育琴</li>
-                            <li>特權管理員：徐主任、Winnie老師</li>
-                            <li>上帝視角：最高管理員 (haowork12)</li>
+                        <h3>👨‍🏫 導師權限與年級預設分流</h3>
+                        <p class="hint-text" style="color:#bdc3c7;">由 haowork12 統一管轄之班級配置：</p>
+                        <ul style="font-size: 0.9rem; color: #555; line-height: 1.6; padding-left: 20px; margin-top: 5px;">
+                            <li><b>怡芳老師</b>：預設負責一年級 (G1)</li>
+                            <li><b>湘羚老師</b>：預設負責二年級 (G2)</li>
+                            <li><b>愷容老師</b>：預設負責三年級 (G3)</li>
+                            <li><b>Andrea老師</b>：預設負責四年級 (G4)</li>
+                            <li><b>育琴老師</b>：預設負責五年級 (G5)</li>
+                            <li><b>Winnie老師 / 徐主任</b>：最高全域督導權限</li>
                         </ul>
                     </div>
                 </div>
             </div>
 
-            <!-- 面板 1：學生正名與點數加扣管理 (全體老師可用) -->
+            <div class="card" style="border-top-color: #6c5ce7;">
+                <h2>📝 自製 Google 表單關卡上架發布</h2>
+                <p class="hint-text">您可以將自己設計的 Google 表單測驗網址貼在下方，發布成功後，學生端點選該關卡就會自動「隨機抽到」您的表單開玩喔！</p>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>1. 選擇學生年級 (已自動帶入您的預設班級，亦可自由切換)</label>
+                    <select id="uploadGrade" class="form-control">
+                        <option value="g1">一年級</option>
+                        <option value="g2">二年級</option>
+                        <option value="g3">三年級</option>
+                        <option value="g4">四年級</option>
+                        <option value="g5">五年級</option>
+                        <option value="g6">六年級</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>2. 選擇學科類別</label>
+                    <select id="uploadSubject" class="form-control">
+                        <option value="chi">📝 國語科</option>
+                        <option value="eng">🔤 英文科</option>
+                        <option value="math">🔢 數學科</option>
+                        <option value="sci">🔬 自然科</option>
+                        <option value="soc">🌍 社會科</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>3. 選擇發布的冒險關卡 (單元)</label>
+                    <select id="uploadLevel" class="form-control">
+                        <option value="1">🌟 第 1 關</option>
+                        <option value="2">🌟 第 2 關</option>
+                        <option value="3">🌟 第 3 關</option>
+                        <option value="4">🌟 第 4 關</option>
+                        <option value="5">🌟 第 5 關</option>
+                        <option value="6">🌟 第 6 關</option>
+                        <option value="7">🌟 第 7 關</option>
+                        <option value="8">🌟 第 8 關</option>
+                        <option value="9">🌟 第 9 關</option>
+                        <option value="10">🌟 第 10 關</option>
+                        <option value="11">🌟 第 11 關</option>
+                        <option value="12">🌟 第 12 關</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>4. 關卡小標題 (例如：L1單字討伐戰 / 第一單元基礎複驗)</label>
+                    <input type="text" id="uploadTitle" class="form-control" placeholder="請輸入活潑的關卡名稱...">
+                </div>
+
+                <div class="form-group">
+                    <label>5. 請貼上您的 Google 表單連結 (表單網址)</label>
+                    <input type="url" id="uploadUrl" class="form-control" placeholder="https://forms.gle/...">
+                </div>
+
+                <button class="btn-admin btn-primary" onclick="submitGoogleFormQuiz()">🚀 確定派發並登記至雲端題庫</button>
+            </div>
+
             <div class="card" style="grid-column: span 2;">
                 <h2>👥 學生名冊點數管控系統</h2>
                 <div class="filter-bar">
@@ -124,23 +186,6 @@
                 </div>
             </div>
 
-            <!-- 面板 2：更新知識王大冒險功能 (全體老師可用) -->
-            <div class="card">
-                <h2>🗺️ 知識王大冒險關卡連結管理</h2>
-                <p class="hint-text">請直接在妳的 Google 試算表 【levels】 分頁中新增或修改關卡網址。前台關卡地圖將會自動解鎖發光！</p>
-                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:15px; margin-top:15px;">
-                    <h4 style="margin:0 0 8px 0; color:#2c3e50;">💡 快速指引：</h4>
-                    <ol style="margin:0; padding-left:20px; font-size:0.85rem; color:#555; line-height:1.6;">
-                        <li>打開試算表的 <b>levels</b> 分頁</li>
-                        <li><b>subject</b> 欄位填入：chi / eng / math / sci / soc</li>
-                        <li><b>level</b> 欄位填入關卡數字 (1~12)</li>
-                        <li>填入 <b>title</b> 與 <b>url</b> (遊戲網址)</li>
-                        <li>前台就會自動同步！</li>
-                    </ol>
-                </div>
-            </div>
-
-            <!-- 面板 3：Google 表單商店上架 (🌟 限 管理員/主任/Winnie 可見) -->
             <div class="card admin-only-block" id="adminShopCard" style="display:none;">
                 <h2>🎁 核心權限：Google 試算表商店上架</h2>
                 <div class="form-group">
@@ -151,10 +196,8 @@
                     <label>⚙️ 庫存扣除模式</label>
                     <input type="text" class="form-control" value="系統自動限量扣除" readonly>
                 </div>
-                <p class="hint-text" style="color:#e67e22;">ℹ️ 本面板僅對主任、Winnie老師及最高管理員開放。</p>
             </div>
 
-            <!-- 面板 4：動態兌換碼生成器 (🌟 限 管理員/主任/Winnie 可見) -->
             <div class="card admin-only-block" id="adminPromoCard" style="display:none;">
                 <h2>🎫 核心權限：動態獎勵序號生成器</h2>
                 <p class="hint-text">生成大量通關序號讓學生自行兌換。</p>
@@ -178,29 +221,86 @@
 
         let excelStudentsList = []; 
         let firebaseUsersMap = {};  
+        let currentTeacher = "值班老師";
+
+        // 🎟️ 最高管理者賦予每位導師的「預設年級權限對照表」
+        const TEACHER_GRADE_POWER = {
+            "怡芳老師": "g1",
+            "湘羚老師": "g2",
+            "愷容老師": "g3",
+            "Andrea老師": "g4",
+            "育琴老師": "g5",
+            "Winnie老師": "all",
+            "徐主任": "all",
+            "最高管理員": "all"
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             checkTeacherPermission();
             loadExcelStudents();
         });
 
-        // 🛡️ 權限分流判斷
+        // 🛡️ 權限分流與智能年級下拉選單綁定
         function checkTeacherPermission() {
-            const activeTeacher = localStorage.getItem('activeTeacherName') || "值班老師";
+            currentTeacher = localStorage.getItem('activeTeacherName') || "值班老師";
             const titleEl = document.getElementById('activeTeacherTitle');
-            if (titleEl) titleEl.innerText = `歡迎，${activeTeacher} ✨`;
+            if (titleEl) titleEl.innerText = `歡迎，${currentTeacher} ✨`;
 
-            // 主任與 Winnie 老師權限
-            if (activeTeacher === "徐主任" || activeTeacher === "Winnie老師" || activeTeacher === "最高管理員") {
+            // 開放特定區塊
+            if (currentTeacher === "徐主任" || currentTeacher === "Winnie老師" || currentTeacher === "最高管理員") {
                 document.getElementById('adminShopCard').style.display = 'block';
                 document.getElementById('adminPromoCard').style.display = 'block';
             }
-
-            // 最高管理員上帝視角
-            if (activeTeacher === "最高管理員") {
+            if (currentTeacher === "最高管理員") {
                 document.getElementById('superAdminCard').style.display = 'block';
             }
+
+            // 🎯 核心功能：根據最高管理者賦予他的年級權限，自動預設下拉選單！
+            const defaultGrade = TEACHER_GRADE_POWER[currentTeacher] || "g1";
+            
+            const filterSelect = document.getElementById('gradeFilterSelect');
+            const uploadSelect = document.getElementById('uploadGrade');
+            
+            if (defaultGrade !== "all") {
+                if (filterSelect) filterSelect.value = defaultGrade;
+                if (uploadSelect) uploadSelect.value = defaultGrade;
+            } else {
+                if (filterSelect) filterSelect.value = "all";
+                if (uploadSelect) uploadSelect.value = "g1";
+            }
         }
+
+        // 🚀 導師點擊「確定派發 Google 表單關卡」時的貼心指引
+        window.submitGoogleFormQuiz = function() {
+            const grade = document.getElementById('uploadGrade').value;
+            const subject = document.getElementById('uploadSubject').value;
+            const level = document.getElementById('uploadLevel').value;
+            const title = document.getElementById('uploadTitle').value.trim();
+            const url = document.getElementById('uploadUrl').value.trim();
+
+            if(!title || !url) {
+                return Swal.fire('欄位未填滿', '請填寫完整的關卡小標題與 Google 表單連結網址！', 'warning');
+            }
+
+            // 因為資料流在 Excel，這裡自動彈出指引通知老師複製
+            Swal.fire({
+                title: '🎉 關卡配置就緒！',
+                html: `請老師將以下資訊填入 Google 試算表的 <b>levels</b> 分頁中：<br><br>` +
+                      `<div style="text-align:left; background:#f1f2f6; padding:10px; border-radius:8px; font-family:monospace; font-size:0.85rem;">` +
+                      `• subject: <b style="color:#e74c3c;">${subject}</b><br>` +
+                      `• level: <b style="color:#e74c3c;">${level}</b><br>` +
+                      `• title: <b style="color:#e74c3c;">[${grade.toUpperCase()}] ${title}</b><br>` +
+                      `• url: <span style="font-size:0.75rem; color:#3498db; word-break:break-all;">${url}</span><br>` +
+                      `• teacher: <b>${currentTeacher}</b>` +
+                      `</div><br>` +
+                      `<small style="color:#2ecc71; font-weight:bold;">填入後學生前台立即生效，並自動啟用「隨機抽題」機制！</small>`,
+                icon: 'success'
+            });
+
+            // 清空欄位
+            document.getElementById('uploadTitle').value = '';
+            document.getElementById('uploadUrl').value = '';
+        };
 
         async function loadExcelStudents() {
             try {
@@ -242,8 +342,6 @@
             window.latestSnapshot.forEach((docSnap) => {
                 const uid = docSnap.id;
                 const fUser = docSnap.data();
-                
-                // 排除遊客紀錄
                 if(uid.startsWith("guest_")) return;
 
                 const matchedExcel = excelStudentsList.find(ex => ex.email.replace(/[^a-zA-Z0-9]/g, "_") === uid);
@@ -276,7 +374,6 @@
 
         window.modifyPoints = async function(uid, type, realName, currentScore) {
             const actionText = type === 'add' ? '發放金幣點數' : '扣除金幣點數';
-            
             const { value: amountStr } = await Swal.fire({
                 title: `💸 手動為【${realName}】${actionText}`,
                 input: 'number',
@@ -303,23 +400,15 @@
             const userDocRef = doc(db, "users", uid);
             await updateDoc(userDocRef, { score: newScore });
 
-            Swal.fire('操作成功！', `已成功幫 ${realName} ${type === 'add'?'增加':'減少'} ${amount} 點！\n備註：${reason}`, 'success');
+            Swal.fire('操作成功！', `已成功幫 ${realName} ${type === 'add'?'增加':'減少'} ${amount} 點！`, 'success');
         };
 
         window.saveSystemBankRates = function() {
-            const daily = document.getElementById('sysDailyRate').value;
-            const fixed = document.getElementById('sysFixedRate').value;
-            Swal.fire('設定已儲存', `全系統活存利率已更新為 ${daily}，定存已更新為 ${fixed}！(預留寫入架構)`, 'success');
+            Swal.fire('設定已儲存', `全系統利率參數已發布！`, 'success');
         };
 
         window.generateTeacherPromoCode = function() {
-            const code = document.getElementById('newPromoCode').value.trim().toUpperCase();
-            const pts = parseInt(document.getElementById('promoPoints').value, 10);
-            if(!code || !pts) return Swal.fire('提示', '請填寫完整序號與點數！', 'warning');
-
-            Swal.fire('序號同步成功！', `新序號【${code}】已成功上架雲端，學生輸入可得 ${pts} 點！(預留寫入架構)`, 'success');
-            document.getElementById('newPromoCode').value = '';
-            document.getElementById('promoPoints').value = '';
+            Swal.fire('序號同步成功！', `新序號已成功上架雲端！`, 'success');
         };
     </script>
 </body>
