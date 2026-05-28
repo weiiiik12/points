@@ -6,9 +6,9 @@ import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.
 let currentUser = null;
 let userRef = null;
 let userData = null;
-let currentSelectedSubject = 'chi'; 
-let cloudLevelsData = []; 
-let excelUsersDatabase = []; 
+let currentSelectedSubject = 'chi'; // 預設為國語科
+let cloudLevelsData = []; // 儲存全校導師上傳的 Google 表單題庫陣列
+let excelUsersDatabase = []; // 儲存全校學生帳密名冊
 
 // 🌟 全域遊客判定開關
 let isGuest = false;
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     initAuthButtons();
     checkWeekendStatus();
-    loadCloudLevels();
+    loadCloudLevels(); // 載入雲端多導師 Google 表單題庫庫
     fetchGoogleSheetShop(); 
     
     const adminBtn = document.querySelector('.btn-settings');
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// 🛡️ 遊客權限檢查器 (只要是遊客，就會被這道牆擋下來)
+// 🛡️ 遊客權限檢查器
 function checkGuestPermission() {
     if (isGuest) {
         Swal.fire('👻 遊客模式', '您目前使用的是遊客體驗帳號，僅供參觀看畫面，無法執行此操作喔！', 'info');
@@ -73,14 +73,14 @@ function checkAutoLogin() {
     if (savedEmail) {
         const matchedUser = excelUsersDatabase.find(u => u.email === savedEmail);
         if (matchedUser) {
-            isGuest = false; // 正式學生
+            isGuest = false;
             const userCleanId = savedEmail.replace(/[^a-zA-Z0-9]/g, "_");
             enterSystem(userCleanId, matchedUser.realName);
         } else {
             localStorage.removeItem('hago_logged_in_email');
         }
     } else if (savedGuest) {
-        isGuest = true; // 記憶中是遊客
+        isGuest = true;
         enterSystem(savedGuest, "體驗小遊客");
     }
 }
@@ -113,7 +113,7 @@ async function loginUser() {
     const matchedUser = excelUsersDatabase.find(u => u.email === email && u.password === password);
 
     if (matchedUser) {
-        isGuest = false; // 驗證成功，關閉遊客模式
+        isGuest = false;
         localStorage.setItem('hago_logged_in_email', email);
         const userCleanId = email.replace(/[^a-zA-Z0-9]/g, "_"); 
         enterSystem(userCleanId, matchedUser.realName);
@@ -130,7 +130,7 @@ async function loginAsGuest() {
         const credential = await signInAnonymously(auth);
         const guestUid = "guest_" + credential.user.uid.substring(0, 8);
         
-        isGuest = true; // 開啟遊客防護模式
+        isGuest = true;
         localStorage.setItem('hago_logged_in_guest', guestUid);
         enterSystem(guestUid, "體驗小遊客");
     } catch (err) {
@@ -146,13 +146,12 @@ async function enterSystem(userCleanId, realName) {
     if (loginOverlay) loginOverlay.style.display = 'none';
     if (mainContainer) mainContainer.style.display = 'block';
 
-    // 🛑 若為遊客，只產生「假資料」餵給畫面，絕對不連結資料庫！
     if (isGuest) {
         userData = {
             realName: realName,
             nickname: "參觀小達人",
             avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=guest_hago`,
-            score: 888, // 給遊客一個吉祥的虛擬點數
+            score: 888,
             liquidBalance: 0,
             history: []
         };
@@ -161,10 +160,9 @@ async function enterSystem(userCleanId, realName) {
             Swal.fire('👻 遊客登入', '歡迎參觀！目前為體驗模式，所有操作都不會產生紀錄喔！', 'success');
         }
         renderLevelGrid(); 
-        return; // 在這裡中斷，不執行下方的 Firebase 讀寫
+        return;
     }
     
-    // 以下為正式學生的 Firebase 讀寫邏輯
     userRef = doc(db, "users", userCleanId);
     const docSnap = await getDoc(userRef);
     
@@ -212,22 +210,22 @@ function updateStudentUI() {
 }
 
 window.changeNickname = async function() {
-    if (!checkGuestPermission()) return; // 阻擋遊客
-    // 未來實作修改暱稱的邏輯...
+    if (!checkGuestPermission()) return;
 };
 
+// 🔄 讀取多導師 Excel 題庫分頁
 async function loadCloudLevels() {
     try {
         const response = await fetch(GOOGLE_SHEET_LEVELS_URL);
         const csvText = await response.text();
-        const lines = csvText.split('\n').map(line => line.split(','));
+        const lines = csvText.split(/\r?\n/).map(line => line.split(','));
         const headers = lines[0].map(h => h.trim());
         
         cloudLevelsData = [];
         for(let i = 1; i < lines.length; i++) {
-            if(!lines[i] || lines[i].length < 2) continue;
+            if(!lines[i] || lines[i].length < 2 || lines[i][0] === "") continue;
             cloudLevelsData.push({
-                subject: (lines[i][headers.indexOf('subject')] || '').trim(),
+                subject: (lines[i][headers.indexOf('subject')] || '').trim().toLowerCase(),
                 level: parseInt(lines[i][headers.indexOf('level')]) || 1,
                 title: (lines[i][headers.indexOf('title')] || '').trim(),
                 url: (lines[i][headers.indexOf('url')] || '').trim()
@@ -239,24 +237,50 @@ async function loadCloudLevels() {
     }
 }
 
+// 🗺️ 升級版：支援多表單隨機抽題演算的關卡矩陣
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
     grid.innerHTML = '';
     
+    // 取得當前正式學生的年級代號 (遊客預設為一年的 g1)
+    const currentGradeCode = (userData && userData.email) ? 
+        (excelUsersDatabase.find(u => u.email === localStorage.getItem('hago_logged_in_email'))?.grade || 'g1') : 'g1';
+
     for (let i = 1; i <= 12; i++) {
-        const matchConfig = cloudLevelsData.find(item => item.subject === currentSelectedSubject && item.level === i);
+        // 🔍 篩選：篩選出所有符合「當前學科」且「當前關卡數字」的雲端題庫名單
+        const allMatchedQuizzes = cloudLevelsData.filter(item => item.subject === currentSelectedSubject && item.level === i);
+        
+        // 🔍 進階過濾：如果在 title 裡面有包含年級標記（如：[G1] 或 g1），則優先進行年級配對
+        let finalQuizzesPool = allMatchedQuizzes.filter(item => item.title.toLowerCase().includes(currentGradeCode));
+        
+        // 如果該關卡沒有特定區分年級，就直接使用該科目該關卡的所有表單作為備用池
+        if (finalQuizzesPool.length === 0) {
+            finalQuizzesPool = allMatchedQuizzes;
+        }
+
         const btn = document.createElement('button');
         btn.className = 'btn-level-placeholder';
         
-        if (matchConfig && matchConfig.url) {
+        if (finalQuizzesPool.length > 0 && finalQuizzesPool[0].url) {
+            // 🔥 只要有導師上傳過表單，關卡按鈕就會點亮！
             btn.style.cssText = "padding: 12px 8px; border-radius: 10px; cursor: pointer; font-weight: bold; background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; border: none; box-shadow: 0 4px 8px rgba(108,92,231,0.2);";
-            btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${matchConfig.title || '點擊出發'}</small>`;
+            
+            // 秀出關卡地圖上的小標題
+            const displayTitle = finalQuizzesPool[0].title.replace(new RegExp(`\\[${currentGradeCode.toUpperCase()}\\]`, 'gi'), '').trim();
+            btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${displayTitle || '進入挑戰'}</small>`;
+            
             btn.onclick = () => { 
-                if (!checkGuestPermission()) return; // 阻擋遊客點擊關卡
-                window.open(matchConfig.url, '_blank'); 
+                if (!checkGuestPermission()) return; // 阻擋遊客
+                
+                // 🎲 核心機制：從符合條件的表單池中，自動進行「隨機抽題」
+                const randomQuizIdx = Math.floor(Math.random() * finalQuizzesPool.length);
+                const chosenQuizFormUrl = finalQuizzesPool[randomQuizIdx].url;
+                
+                window.open(chosenQuizFormUrl, '_blank'); // 彈出被隨機抽到的 Google 表單！
             };
         } else {
+            // 🔒 沒表單就維持虛線灰色鎖定
             btn.className = 'btn-level-placeholder'; 
             btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
             btn.onclick = () => {
@@ -268,6 +292,7 @@ function renderLevelGrid() {
     }
 }
 
+// 📊 抓取商店商品
 async function fetchGoogleSheetShop() {
     const shopGrid = document.getElementById('googleSheetShopGrid');
     if (!shopGrid) return;
@@ -307,8 +332,7 @@ async function fetchGoogleSheetShop() {
 }
 
 window.buyShopItem = async function(title, price, stock) {
-    if (!checkGuestPermission()) return; // 阻擋遊客購買商品
-    
+    if (!checkGuestPermission()) return; 
     if (!userData) return;
     if (userData.score < price) return Swal.fire('點數不足', `還差 ${price - userData.score} 點才能購買喔！`, 'warning');
 
@@ -349,6 +373,7 @@ function checkWeekendStatus() {
     return isWeekend;
 }
 
+// 🎟️ 序號兌換系統
 const LOCAL_PROMO_DATABASE = {
     "GOODJOB888": { points: 100, reason: "課堂表現優異" },
     "ENGLISHKING": { points: 150, reason: "英文單字比賽獲勝" },
@@ -356,7 +381,7 @@ const LOCAL_PROMO_DATABASE = {
 };
 
 window.redeemPromoCode = async function() {
-    if (!checkGuestPermission()) return; // 阻擋遊客兌換序號
+    if (!checkGuestPermission()) return; 
 
     const input = document.getElementById('promoCodeInput');
     if (!input || !input.value.trim()) return Swal.fire('提示', '請輸入序號', 'warning');
@@ -381,25 +406,25 @@ window.redeemPromoCode = async function() {
 };
 
 window.startWeekendQuiz = function() {
-    if (!checkGuestPermission()) return; // 阻擋遊客進入週末副本
+    if (!checkGuestPermission()) return; 
     if (checkWeekendStatus()) Swal.fire('⚔️ 限時副本開啟！', '週末題目獲得點數自動翻倍！', 'success');
     else Swal.fire('未到開啟時間', '週末才會限時開放隱藏題庫喔！', 'info');
 };
 
 window.joinTeamChallenge = function() {
-    if (!checkGuestPermission()) return; // 阻擋遊客綁定隊伍
+    if (!checkGuestPermission()) return; 
     const val = document.getElementById('teamRoomInput').value.trim();
     if(!val) return Swal.fire('提示', '請輸入 Room ID', 'warning');
     Swal.fire('👥 綁定成功', `已成功加入房間：${val}，組隊通關將獲得倍率加成！`, 'success');
 };
 
 window.submitPost = function() { 
-    if (!checkGuestPermission()) return; // 阻擋遊客留言
+    if (!checkGuestPermission()) return; 
     Swal.fire('開發中', '校園廣場留言功能即將開放！', 'info'); 
 };
 
 async function openAdminPanel() {
-    if (!checkGuestPermission()) return; // 阻擋遊客點擊後台
+    if (!checkGuestPermission()) return; 
 
     const { value: teacherId } = await Swal.fire({
         title: '🔑 導師安全認證',
@@ -408,19 +433,7 @@ async function openAdminPanel() {
         showCancelButton: true,
         confirmButtonColor: '#2c3e50'
     });
-    
-    // 🎟️ 補習班導師團隊與最高管理員清單
-    const TEACHER_REGISTRY = { 
-        "hao002": "怡芳老師", 
-        "hao030": "湘羚老師", 
-        "hao015": "愷容老師", 
-        "hao026": "Andrea老師", 
-        "lovesan": "徐主任", 
-        "hao006": "育琴老師", 
-        "hao036": "Winnie老師",
-        "haowork12": "最高管理員" // ✨ 新增最高權限
-    };
-    
+    const TEACHER_REGISTRY = { "hao002": "怡芳老師", "hao030": "湘羚老師", "hao015": "愷容老師", "hao026": "Andrea老師", "lovesan": "徐主任", "hao006": "育琴老師", "hao036": "Winnie老師", "haowork12": "最高管理員" };
     if (teacherId && TEACHER_REGISTRY[teacherId]) {
         localStorage.setItem('activeTeacherName', TEACHER_REGISTRY[teacherId]);
         Swal.fire({ title: '認證成功', text: `歡迎，${TEACHER_REGISTRY[teacherId]}！`, icon: 'success', timer: 1000, showConfirmButton: false })
@@ -430,7 +443,6 @@ async function openAdminPanel() {
     }
 }
 
-// 🛑 登出按鈕：清除記憶並重整網頁
 window.handleLogout = function() { 
     localStorage.removeItem('hago_logged_in_email');
     localStorage.removeItem('hago_logged_in_guest');
