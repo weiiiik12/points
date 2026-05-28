@@ -10,15 +10,17 @@ let currentSelectedSubject = 'chi';
 let cloudLevelsData = []; 
 let excelUsersDatabase = []; 
 
+// 🌟 全域遊客判定開關
+let isGuest = false;
+
 // 🎯 Winnie 提供的三大核心 Google 試算表 CSV 網址對接
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=0&single=true&output=csv";
 const GOOGLE_SHEET_LEVELS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=392728486&single=true&output=csv"; 
 const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=485295361&single=true&output=csv";
 
-// 🌟 改為 async，確保先載入 Excel 名冊後，再來檢查是否要「自動登入」
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadExcelCredentials(); // 1. 先把全校名冊下載好
-    checkAutoLogin();             // 2. 檢查之前是不是登入過？是的話自動放行！
+    await loadExcelCredentials(); 
+    checkAutoLogin();             
     
     initAuthButtons();
     checkWeekendStatus();
@@ -30,6 +32,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         adminBtn.addEventListener('click', openAdminPanel);
     }
 });
+
+// 🛡️ 遊客權限檢查器 (只要是遊客，就會被這道牆擋下來)
+function checkGuestPermission() {
+    if (isGuest) {
+        Swal.fire('👻 遊客模式', '您目前使用的是遊客體驗帳號，僅供參觀看畫面，無法執行此操作喔！', 'info');
+        return false;
+    }
+    return true;
+}
 
 // 🔄 預載 Excel 全校學生註冊庫
 async function loadExcelCredentials() {
@@ -54,23 +65,22 @@ async function loadExcelCredentials() {
     }
 }
 
-// 🛡️ 自動登入檢查機制 (記憶吐司)
+// 🛡️ 自動登入檢查機制
 function checkAutoLogin() {
     const savedEmail = localStorage.getItem('hago_logged_in_email');
     const savedGuest = localStorage.getItem('hago_logged_in_guest');
 
     if (savedEmail) {
-        // 如果瀏覽器記住了某個信箱，去名冊找找看
         const matchedUser = excelUsersDatabase.find(u => u.email === savedEmail);
         if (matchedUser) {
+            isGuest = false; // 正式學生
             const userCleanId = savedEmail.replace(/[^a-zA-Z0-9]/g, "_");
             enterSystem(userCleanId, matchedUser.realName);
         } else {
-            // 如果老師在 Excel 把這學生刪了，就清除記憶
             localStorage.removeItem('hago_logged_in_email');
         }
     } else if (savedGuest) {
-        // 如果上次是遊客身分玩到一半
+        isGuest = true; // 記憶中是遊客
         enterSystem(savedGuest, "體驗小遊客");
     }
 }
@@ -100,13 +110,11 @@ async function loginUser() {
     
     if (errorEl) errorEl.innerText = "雲端數據驗證中...";
 
-    // 🔍 對照 Excel 名冊
     const matchedUser = excelUsersDatabase.find(u => u.email === email && u.password === password);
 
     if (matchedUser) {
-        // 🎉 登入成功！把信箱存進瀏覽器記憶裡
+        isGuest = false; // 驗證成功，關閉遊客模式
         localStorage.setItem('hago_logged_in_email', email);
-        
         const userCleanId = email.replace(/[^a-zA-Z0-9]/g, "_"); 
         enterSystem(userCleanId, matchedUser.realName);
     } else {
@@ -117,12 +125,12 @@ async function loginUser() {
 // 👻 訪客匿名試玩
 async function loginAsGuest() {
     const errorEl = document.getElementById('loginError');
-    if (errorEl) errorEl.innerText = "建立臨時檔案中...";
+    if (errorEl) errorEl.innerText = "建立臨時體驗檔案中...";
     try {
         const credential = await signInAnonymously(auth);
         const guestUid = "guest_" + credential.user.uid.substring(0, 8);
         
-        // 🎉 遊客登入成功！把遊客 ID 存進瀏覽器記憶裡
+        isGuest = true; // 開啟遊客防護模式
         localStorage.setItem('hago_logged_in_guest', guestUid);
         enterSystem(guestUid, "體驗小遊客");
     } catch (err) {
@@ -135,12 +143,31 @@ async function enterSystem(userCleanId, realName) {
     const loginOverlay = document.getElementById('loginOverlay');
     const mainContainer = document.getElementById('mainAppContainer');
     
-    userRef = doc(db, "users", userCleanId);
-    
     if (loginOverlay) loginOverlay.style.display = 'none';
     if (mainContainer) mainContainer.style.display = 'block';
+
+    // 🛑 若為遊客，只產生「假資料」餵給畫面，絕對不連結資料庫！
+    if (isGuest) {
+        userData = {
+            realName: realName,
+            nickname: "參觀小達人",
+            avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=guest_hago`,
+            score: 888, // 給遊客一個吉祥的虛擬點數
+            liquidBalance: 0,
+            history: []
+        };
+        updateStudentUI();
+        if(event && event.type === 'click') {
+            Swal.fire('👻 遊客登入', '歡迎參觀！目前為體驗模式，所有操作都不會產生紀錄喔！', 'success');
+        }
+        renderLevelGrid(); 
+        return; // 在這裡中斷，不執行下方的 Firebase 讀寫
+    }
     
+    // 以下為正式學生的 Firebase 讀寫邏輯
+    userRef = doc(db, "users", userCleanId);
     const docSnap = await getDoc(userRef);
+    
     if (docSnap.exists()) {
         userData = docSnap.data();
         updateStudentUI();
@@ -165,7 +192,6 @@ async function enterSystem(userCleanId, realName) {
         }
     });
 
-    // 只有在手動輸入帳密時才顯示歡迎回來（自動登入則靜默放行）
     if(event && event.type === 'click') {
         Swal.fire('登入成功', `歡迎來到皓孩子網，${realName}！✨`, 'success');
     }
@@ -185,7 +211,11 @@ function updateStudentUI() {
     if (avatar && userData.avatarUrl) avatar.src = userData.avatarUrl;
 }
 
-// 🔄 讀取關卡連結
+window.changeNickname = async function() {
+    if (!checkGuestPermission()) return; // 阻擋遊客
+    // 未來實作修改暱稱的邏輯...
+};
+
 async function loadCloudLevels() {
     try {
         const response = await fetch(GOOGLE_SHEET_LEVELS_URL);
@@ -209,7 +239,6 @@ async function loadCloudLevels() {
     }
 }
 
-// 🗺️ 渲染關卡矩陣
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
@@ -223,7 +252,10 @@ function renderLevelGrid() {
         if (matchConfig && matchConfig.url) {
             btn.style.cssText = "padding: 12px 8px; border-radius: 10px; cursor: pointer; font-weight: bold; background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; border: none; box-shadow: 0 4px 8px rgba(108,92,231,0.2);";
             btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${matchConfig.title || '點擊出發'}</small>`;
-            btn.onclick = () => { window.open(matchConfig.url, '_blank'); };
+            btn.onclick = () => { 
+                if (!checkGuestPermission()) return; // 阻擋遊客點擊關卡
+                window.open(matchConfig.url, '_blank'); 
+            };
         } else {
             btn.className = 'btn-level-placeholder'; 
             btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
@@ -236,7 +268,6 @@ function renderLevelGrid() {
     }
 }
 
-// 📊 抓取商店商品
 async function fetchGoogleSheetShop() {
     const shopGrid = document.getElementById('googleSheetShopGrid');
     if (!shopGrid) return;
@@ -276,6 +307,8 @@ async function fetchGoogleSheetShop() {
 }
 
 window.buyShopItem = async function(title, price, stock) {
+    if (!checkGuestPermission()) return; // 阻擋遊客購買商品
+    
     if (!userData) return;
     if (userData.score < price) return Swal.fire('點數不足', `還差 ${price - userData.score} 點才能購買喔！`, 'warning');
 
@@ -316,7 +349,6 @@ function checkWeekendStatus() {
     return isWeekend;
 }
 
-// 🎟️ 序號兌換系統
 const LOCAL_PROMO_DATABASE = {
     "GOODJOB888": { points: 100, reason: "課堂表現優異" },
     "ENGLISHKING": { points: 150, reason: "英文單字比賽獲勝" },
@@ -324,6 +356,8 @@ const LOCAL_PROMO_DATABASE = {
 };
 
 window.redeemPromoCode = async function() {
+    if (!checkGuestPermission()) return; // 阻擋遊客兌換序號
+
     const input = document.getElementById('promoCodeInput');
     if (!input || !input.value.trim()) return Swal.fire('提示', '請輸入序號', 'warning');
     const code = input.value.trim().toUpperCase();
@@ -347,19 +381,26 @@ window.redeemPromoCode = async function() {
 };
 
 window.startWeekendQuiz = function() {
+    if (!checkGuestPermission()) return; // 阻擋遊客進入週末副本
     if (checkWeekendStatus()) Swal.fire('⚔️ 限時副本開啟！', '週末題目獲得點數自動翻倍！', 'success');
     else Swal.fire('未到開啟時間', '週末才會限時開放隱藏題庫喔！', 'info');
 };
 
 window.joinTeamChallenge = function() {
+    if (!checkGuestPermission()) return; // 阻擋遊客綁定隊伍
     const val = document.getElementById('teamRoomInput').value.trim();
     if(!val) return Swal.fire('提示', '請輸入 Room ID', 'warning');
     Swal.fire('👥 綁定成功', `已成功加入房間：${val}，組隊通關將獲得倍率加成！`, 'success');
 };
 
-window.submitPost = function() { Swal.fire('開發中', '校園廣場留言功能即將開放！', 'info'); };
+window.submitPost = function() { 
+    if (!checkGuestPermission()) return; // 阻擋遊客留言
+    Swal.fire('開發中', '校園廣場留言功能即將開放！', 'info'); 
+};
 
 async function openAdminPanel() {
+    if (!checkGuestPermission()) return; // 阻擋遊客點擊後台
+
     const { value: teacherId } = await Swal.fire({
         title: '🔑 導師安全認證',
         input: 'password',
