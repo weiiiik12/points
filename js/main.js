@@ -211,6 +211,7 @@ async function enterSystem(userCleanId, realName) {
 }
 
 // 🔄 更新學生頂部資訊欄與「榮譽背包小櫥窗」
+// 🔄 更新學生頂部資訊欄與「蝦皮票券風榮譽背包」
 function updateStudentUI() {
     if (!userData) return;
     const nameDisplay = document.getElementById('childNameDisplay');
@@ -219,33 +220,105 @@ function updateStudentUI() {
     const avatar = document.getElementById('userAvatar');
 
     if (nameDisplay) nameDisplay.innerText = `${userData.nickname} (${userData.realName})`;
-    if (scoreDisplay) scoreDisplay.innerText = userData.score || 0;
+    if (scoreDisplay) bookkeepingScore(userData.score || 0); // 確保分數正確呈現
     if (userEmail) userEmail.innerText = `🟢 在線：${userData.realName}`;
     if (avatar && userData.avatarUrl) avatar.src = userData.avatarUrl;
 
-    // 🎒 🔥 【核心修正】即時重刷並渲染學生的實體背包！
+    // 🎒 蝦皮優惠券風格背包外殼
     const backpackGrid = document.getElementById('inventoryContainer');
     if (backpackGrid) {
-        const myItems = userData.inventory || []; // 撈取雲端存好的禮物清單
+        const myItems = userData.inventory || []; 
         
         if (myItems.length === 0) {
-            backpackGrid.innerHTML = `<p style="color:#999; grid-column: span 2; text-align:center; font-size:0.9rem; padding:10px;">背包空空如也，快去商店逛逛吧！</p>`;
+            backpackGrid.innerHTML = `<p style="color:#999; text-align:center; font-size:0.9rem; padding:15px;">🎒 背包空空如也，快去上面買東西吧！</p>`;
         } else {
-            let backpackHtml = '';
-            myItems.forEach(item => {
+            let backpackHtml = `<div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px; width: 100%; box-sizing: border-box;">`;
+            
+            // 智慧型巡邏學生的背包商品，並繪製精美橫式票券
+            myItems.forEach((item, index) => {
+                const isClaimed = item.status === "已領取"; // 判斷是否已經找老師兌換過
+                
                 backpackHtml += `
-                    <div style="background:#f8f9fa; border:2px solid #e2e8f0; border-radius:12px; padding:10px; text-align:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position:relative;">
-                        <span style="font-size:1.8rem;">🎁</span>
-                        <h5 style="margin:6px 0 2px 0; font-size:0.82rem; color:#2d3436; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.title}</h5>
-                        <small style="color:#a0aec0; font-size:0.65rem; display:block;">📅 ${item.date || '兌換時間'}</small>
-                        <div style="margin-top:6px; background:#9b59b6; color:white; font-size:0.65rem; font-weight:bold; padding:2px 0; border-radius:4px;">未領取</div>
+                    <div class="ticket-card" style="display: flex; background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); width: 100%; min-height: 90px; align-items: center; box-sizing: border-box;">
+                        
+                        <!-- 🎟️ 左側：亮橘色鋸齒票券頭 (放商品代表圖片) -->
+                        <div style="background: ${isClaimed ? '#b2bec3' : 'linear-gradient(135deg, #ff7675, #ff9f43)'}; width: 85px; min-height: 95px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; position: relative; flex-shrink: 0;">
+                            <span style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">🎁</span>
+                            <small style="font-size: 0.65rem; font-weight: bold; margin-top: 4px; letter-spacing: 1px;">官方正品</small>
+                            <!-- 智慧鋸齒造型裝飾 -->
+                            <div style="position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; background-image: radial-gradient(circle, #f8f9fa 3px, transparent 4px); background-size: 12px 12px;"></div>
+                        </div>
+
+                        <!-- 📝 中間：詳細資訊欄位 (名稱、日期、價值認證) -->
+                        <div style="flex: 1; padding: 10px 15px; text-align: left; display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                            <h4 style="margin: 0 0 4px 0; font-size: 1.05rem; color: #2d3436; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</h4>
+                            <p style="margin: 0 0 2px 0; font-size: 0.75rem; color: #718096; font-weight: 500;">📅 兌換時間：${item.date || '未知'}</p>
+                            <p style="margin: 0; font-size: 0.75rem; color: #ff7675; font-weight: bold;">💎 價值：認證專屬獎勵</p>
+                        </div>
+
+                        <!-- ⚡ 右側：提醒/領取按鈕分流 -->
+                        <div style="padding-right: 15px; flex-shrink: 0;">
+                            ${isClaimed ? `
+                                <button style="background: #b2bec3; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: not-allowed; box-shadow: none;">已核銷</button>
+                            ` : `
+                                <button onclick="claimBackpackItem(${index}, '${item.title.replace(/'/g, "\\'")}')" style="background: #ff7675; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(255,118,117,0.25);">未領取</button>
+                            `}
+                        </div>
+
                     </div>
                 `;
             });
+            
+            backpackHtml += `</div>`;
             backpackGrid.innerHTML = backpackHtml;
         }
     }
 }
+
+// 補助防呆：確保分數標籤能穩定顯示
+function bookkeepingScore(score) {
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    if (scoreDisplay) scoreDisplay.innerText = score;
+}
+
+// ⚡ 新增核心功能：學生拿著手機找老師，點擊「未領取」進行現場即時實體核銷
+window.claimBackpackItem = async function(itemIndex, itemTitle) {
+    if (!checkGuestPermission()) return; // 阻擋遊客
+
+    Swal.fire({
+        title: '🎁 實體禮物領取確認',
+        html: `請問老師已經把實體小禮物<br><b style="color:#ff7675; font-size:1.1rem;">【${itemTitle}】</b><br>交到妳手上了嗎？<br><br><span style="color:#e74c3c; font-size:0.85rem; font-weight:bold;">⚠️ 注意：確定領取後不可退換喔！</span>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ff7675',
+        cancelButtonColor: '#b2bec3',
+        confirmButtonText: '確定領取，不退換！',
+        cancelButtonText: '先不要'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: '安全核銷中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            // 1. 深拷貝目前的背包清單，並將指定編號商品改為「已領取」
+            const currentInventory = [...(userData.inventory || [])];
+            if (currentInventory[itemIndex]) {
+                currentInventory[itemIndex].status = "已領取";
+                currentInventory[itemIndex].claimedAt = new Date().toLocaleString(); // 順便幫妳留底時間
+            }
+
+            // 2. 📡 秒速上傳、更新雲端 Firebase 資料庫
+            try {
+                await updateDoc(userRef, {
+                    inventory: currentInventory
+                });
+                
+                Swal.fire('🎉 領取成功！', `【${itemTitle}】核銷成功，快開心地向老師領取吧！`, 'success');
+            } catch (err) {
+                console.error("核銷失敗:", err);
+                Swal.fire('連線異常', '請找 Winnie 老師手動處理喔！', 'error');
+            }
+        }
+    });
+};
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
