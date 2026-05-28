@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAGO 2.0 | 補習班雲端導師管理後台</title>
+    <title>皓老師管理後台 | 皓孩子系統 2.0</title>
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -17,8 +17,9 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; color: #333; }
         .admin-navbar { background-color: var(--admin-primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .admin-container { max-width: 600px; margin: 30px auto; padding: 0 20px; }
+        .admin-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
         .welcome-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .grid-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid var(--admin-accent); }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #4a5568; }
@@ -26,12 +27,21 @@
         .btn-admin { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; }
         .btn-primary { background: #3498db; color: white; box-shadow: 0 4px 10px rgba(52,152,219,0.3); }
         .hint-text { font-size: 0.8rem; color: #7f8c8d; margin-top: 5px; line-height: 1.4; }
+        
+        .student-table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        .student-table th, .student-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 0.9rem; }
+        .student-table th { background-color: #f8fafc; color: #475569; }
+        .action-btn-sm { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 5px; font-weight: bold; }
+        .btn-add-pts { background: #2ecc71; color: white; }
+        .btn-deduct-pts { background: #e74c3c; color: white; }
+        .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background: #edf2f7; padding: 10px; border-radius: 8px; }
+        .filter-select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; color: #4a5568; }
     </style>
 </head>
 <body>
 
     <nav class="admin-navbar">
-        <div style="font-size: 1.2rem; font-weight: bold;">🎒 皓孩子系統 2.0 | 導師雲端管理後台</div>
+        <div style="font-size: 1.2rem; font-weight: bold;">🎒 皓孩子系統 2.0 | 綜合雲端控盤後台</div>
         <div>
             <span id="activeTeacherTitle" style="margin-right: 15px; font-weight: bold; color: #f1c40f;">載入中...</span>
             <button onclick="location.href='index.html'" style="padding: 6px 12px; background: #e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight: bold;">返回學生前台</button>
@@ -41,90 +51,157 @@
     <div class="admin-container">
         
         <div class="welcome-box">
-            <h2 style="border:none; padding:0; margin:0 0 5px 0; font-size: 1.2rem;">👋 雲端一鍵出題系統</h2>
+            <h2 style="border:none; padding:0; margin:0 0 5px 0; font-size: 1.2rem;">👋 補習班雲端經營中心</h2>
             <p style="margin:0; color:#666; font-size:0.9rem;">
-                在下方直接發布您設計的 Google 表單題庫，發布後系統會自動同步至雲端，學生前台即可立刻玩到！
+                左側可發布自製 Google 表單關卡；右側可直接查看全校學生名冊，並利用「四捨五入計算機」發放答題獎勵。
             </p>
         </div>
 
-        <div class="card" style="border-top-color: #6c5ce7;">
-            <h2>📝 自製 Google 表單關卡即時上架</h2>
-            <p class="hint-text">發布成功後，學生端點選該關卡就會自動「隨機抽到」該單元的表單開玩喔！</p>
+        <div class="grid-panel">
             
-            <div class="form-group" style="margin-top: 15px;">
-                <label>1. 選擇學生年級</label>
-                <select id="uploadGrade" class="form-control">
-                    <option value="g1">一年級</option>
-                    <option value="g2">二年級</option>
-                    <option value="g3">三年級</option>
-                    <option value="g4">四年級</option>
-                    <option value="g5">五年級</option>
-                    <option value="g6">六年級</option>
-                </select>
+            <!-- 🗺️ 左側面板：雲端一鍵出題系統 -->
+            <div class="card" style="border-top-color: #6c5ce7;">
+                <h2>📝 自製 Google 表單關卡即時上架</h2>
+                <p class="hint-text">發布成功後，學生端點選該關卡就會自動「隨機抽到」該單元的表單開玩喔！</p>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>1. 選擇學生年級</label>
+                    <select id="uploadGrade" class="form-control">
+                        <option value="g1">一年級</option>
+                        <option value="g2">二年級</option>
+                        <option value="g3">三年級</option>
+                        <option value="g4">四年級</option>
+                        <option value="g5">五年級</option>
+                        <option value="g6">六年級</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>2. 選擇學科類別</label>
+                    <select id="uploadSubject" class="form-control">
+                        <option value="chi">📝 國語科</option>
+                        <option value="eng">🔤 英文科</option>
+                        <option value="math">🔢 數學科</option>
+                        <option value="sci">🔬 自然科</option>
+                        <option value="soc">🌍 社會科</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>3. 選擇發布的冒險關卡 (單元)</label>
+                    <select id="uploadLevel" class="form-control">
+                        <option value="1">🌟 第 1 關</option>
+                        <option value="2">🌟 第 2 關</option>
+                        <option value="3">🌟 第 3 關</option>
+                        <option value="4">🌟 第 4 關</option>
+                        <option value="5">🌟 第 5 關</option>
+                        <option value="6">🌟 第 6 關</option>
+                        <option value="7">🌟 第 7 關</option>
+                        <option value="8">🌟 第 8 關</option>
+                        <option value="9">🌟 第 9 關</option>
+                        <option value="10">🌟 第 10 關</option>
+                        <option value="11">🌟 第 11 關</option>
+                        <option value="12">🌟 第 12 關</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>4. 關卡小標題 (例如：L1單字測驗 / 第一單元基礎複驗)</label>
+                    <input type="text" id="uploadTitle" class="form-control" placeholder="請輸入活潑的關卡名稱...">
+                </div>
+
+                <div class="form-group">
+                    <label>5. 請貼上您的 Google 表單連結 (表單網址)</label>
+                    <input type="url" id="uploadUrl" class="form-control" placeholder="https://forms.gle/...">
+                </div>
+
+                <button class="btn-admin btn-primary" onclick="submitGoogleFormQuiz()">🚀 確定即時上架並儲存至雲端</button>
             </div>
 
-            <div class="form-group">
-                <label>2. 選擇學科類別</label>
-                <select id="uploadSubject" class="form-control">
-                    <option value="chi">📝 國語科</option>
-                    <option value="eng">🔤 英文科</option>
-                    <option value="math">🔢 數學科</option>
-                    <option value="sci">🔬 自然科</option>
-                    <option value="soc">🌍 社會科</option>
-                </select>
+            <!-- 👥 右側面板：學生名冊點數加扣與「自動四捨五入審查系統」 -->
+            <div class="card" style="grid-column: span 2; border-top-color: #2ecc71;">
+                <h2>👥 學生名冊點數審查與管控</h2>
+                <div class="filter-bar">
+                    <label style="font-weight: bold; color: #4a5568;">🔍 按年級篩選學生：</label>
+                    <select id="gradeFilterSelect" class="filter-select" onchange="renderFilteredStudents()">
+                        <option value="all">顯示全校所有學生</option>
+                        <option value="g1">一年級</option>
+                        <option value="g2">二年級</option>
+                        <option value="g3">三年級</option>
+                        <option value="g4">四年級</option>
+                        <option value="g5">五年級</option>
+                        <option value="g6">六年級</option>
+                    </select>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="student-table" id="adminStudentTable">
+                        <thead>
+                            <tr>
+                                <th>年級</th>
+                                <th>真實姓名 (Excel)</th>
+                                <th>目前金幣 💰</th>
+                                <th>快捷操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4" style="text-align:center; color:#999;">雲端資料庫連線中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>3. 選擇發布的冒險關卡 (單元)</label>
-                <select id="uploadLevel" class="form-control">
-                    <option value="1">🌟 第 1 關</option>
-                    <option value="2">🌟 第 2 關</option>
-                    <option value="3">🌟 第 3 關</option>
-                    <option value="4">🌟 第 4 關</option>
-                    <option value="5">🌟 第 5 關</option>
-                    <option value="6">🌟 第 6 關</option>
-                    <option value="7">🌟 第 7 關</option>
-                    <option value="8">🌟 第 8 關</option>
-                    <option value="9">🌟 第 9 關</option>
-                    <option value="10">🌟 第 10 關</option>
-                    <option value="11">🌟 第 11 關</option>
-                    <option value="12">🌟 第 12 關</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>4. 關卡小標題 (例如：L1單字測驗 / 第一單元基礎複驗)</label>
-                <input type="text" id="uploadTitle" class="form-control" placeholder="請輸入活潑的關卡名稱...">
-            </div>
-
-            <div class="form-group">
-                <label>5. 請貼上您的 Google 表單連結 (表單網址)</label>
-                <input type="url" id="uploadUrl" class="form-control" placeholder="https://forms.gle/...">
-            </div>
-
-            <button class="btn-admin btn-primary" onclick="submitGoogleFormQuiz()">🚀 確定即時上架並儲存至雲端</button>
         </div>
-
     </div>
 
     <script type="module">
         import { db } from './firebase-init.js';
-        import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, addDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // 🎯 讀取註冊學生信箱的對照庫網址
+        const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=485295361&single=true&output=csv";
+
+        let excelStudentsList = []; 
+        let currentTeacher = "值班老師";
+
+        // 🎟️ 最高管理者賦予每位導師的預設負責年級
+        const TEACHER_GRADE_POWER = {
+            "怡芳老師": "g1", "湘羚老師": "g2", "愷容老師": "g3",
+            "Andrea老師": "g4", "育琴老師": "g5", "Winnie老師": "all",
+            "徐主任": "all", "最高管理員": "all"
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
-            const currentTeacher = localStorage.getItem('activeTeacherName') || "Winnie老師";
-            const titleEl = document.getElementById('activeTeacherTitle');
-            if (titleEl) titleEl.innerText = `歡迎，${currentTeacher} ✨`;
+            checkTeacherPermission();
+            loadExcelStudents();
         });
 
-        // 🚀 核心優化：點擊一鍵直接寫入 Firebase 雲端資料庫！
+        // 🛡️ 權限與年級智慧連動
+        function checkTeacherPermission() {
+            currentTeacher = localStorage.getItem('activeTeacherName') || "Winnie老師";
+            const titleEl = document.getElementById('activeTeacherTitle');
+            if (titleEl) titleEl.innerText = `歡迎，${currentTeacher} ✨`;
+
+            const defaultGrade = TEACHER_GRADE_POWER[currentTeacher] || "g1";
+            const filterSelect = document.getElementById('gradeFilterSelect');
+            const uploadSelect = document.getElementById('uploadGrade');
+            
+            if (defaultGrade !== "all") {
+                if (filterSelect) filterSelect.value = defaultGrade;
+                if (uploadSelect) uploadSelect.value = defaultGrade;
+            } else {
+                if (filterSelect) filterSelect.value = "all";
+                if (uploadSelect) uploadSelect.value = "g1";
+            }
+        }
+
+        // 🚀 一鍵將題目發布到 Firebase "quizzes" 題庫中
         window.submitGoogleFormQuiz = async function() {
             const grade = document.getElementById('uploadGrade').value;
             const subject = document.getElementById('uploadSubject').value;
             const level = parseInt(document.getElementById('uploadLevel').value, 10);
             const title = document.getElementById('uploadTitle').value.trim();
             const url = document.getElementById('uploadUrl').value.trim();
-            const currentTeacher = localStorage.getItem('activeTeacherName') || "Winnie老師";
 
             if(!title || !url) {
                 return Swal.fire('欄位未填滿', '請填寫完整的關卡小標題與 Google 表單連結網址！', 'warning');
@@ -133,30 +210,153 @@
             Swal.fire({ title: '正在同步至雲端...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
             try {
-                // 📡 直接將這筆關卡丟進 Firebase 的 "quizzes" 集合中
                 await addDoc(collection(db, "quizzes"), {
-                    grade: grade,
-                    subject: subject,
-                    level: level,
-                    title: title,
-                    url: url,
-                    teacher: currentTeacher,
-                    createdAt: new Date().toLocaleString()
+                    grade: grade, subject: subject, level: level, title: title, url: url,
+                    teacher: currentTeacher, createdAt: new Date().toLocaleString()
                 });
 
-                Swal.fire({
-                    title: '🎉 雲端關卡發布成功！',
-                    text: `您上傳的 [${grade.toUpperCase()}] ${title} 已成功寫入雲端題庫，學生前台已同步解鎖！`,
-                    icon: 'success'
-                });
-
-                // 清空輸入框
+                Swal.fire('🎉 雲端關卡發布成功！', `您上傳的 [${grade.toUpperCase()}] ${title} 已寫入雲端題庫，學生前台即刻同步！`, 'success');
                 document.getElementById('uploadTitle').value = '';
                 document.getElementById('uploadUrl').value = '';
-
             } catch (err) {
-                console.error("寫入雲端失敗:", err);
-                Swal.fire('發布失敗', '資料庫連線異常，請稍後再試：' + err.message, 'error');
+                Swal.fire('發布失敗', '資料庫異常：' + err.message, 'error');
+            }
+        };
+
+        // 🔄 載入全校學生花名冊
+        async function loadExcelStudents() {
+            try {
+                const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
+                const csvText = await response.text();
+                const lines = csvText.split(/\r?\n/).map(line => line.split(','));
+                const headers = lines[0].map(h => h.trim());
+                
+                excelStudentsList = [];
+                for(let i = 1; i < lines.length; i++) {
+                    if(!lines[i] || lines[i].length < 2 || lines[i][0] === "") continue;
+                    excelStudentsList.push({
+                        email: (lines[i][headers.indexOf('email')] || '').trim().toLowerCase(),
+                        realName: (lines[i][headers.indexOf('realName')] || '未命名').trim(),
+                        grade: (lines[i][headers.indexOf('grade')] || 'g1').trim().toLowerCase()
+                    });
+                }
+                startFirebaseUsersListener(); 
+            } catch (err) {
+                console.error("讀取 Excel 失敗:", err);
+            }
+        }
+
+        // 📡 即時監聽學生資產數據
+        function startFirebaseUsersListener() {
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                window.latestSnapshot = snapshot;
+                renderFilteredStudents();
+            });
+        }
+
+        // 📊 渲染名冊表格
+        window.renderFilteredStudents = function() {
+            const tbody = document.querySelector('#adminStudentTable tbody');
+            const selectedGrade = document.getElementById('gradeFilterSelect').value;
+            if (!tbody || !window.latestSnapshot) return;
+
+            tbody.innerHTML = '';
+            let count = 0;
+
+            window.latestSnapshot.forEach((docSnap) => {
+                const uid = docSnap.id;
+                const fUser = docSnap.data();
+                if(uid.startsWith("guest_")) return; // 過濾遊客
+
+                const matchedExcel = excelStudentsList.find(ex => ex.email.replace(/[^a-zA-Z0-9]/g, "_") === uid);
+                const displayGrade = matchedExcel ? matchedExcel.grade.toUpperCase() : "未知";
+                const realName = matchedExcel ? matchedExcel.realName : (fUser.realName || "新進學生");
+                const gradeCode = matchedExcel ? matchedExcel.grade : "unknown";
+
+                if (selectedGrade !== 'all' && gradeCode !== selectedGrade) return;
+
+                count++;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:bold; color:#718096;">${displayGrade}</td>
+                    <td><b style="color:#2c3e50; font-size:1rem;">${realName}</b></td>
+                    <td style="color:#27ae60; font-weight:bold; font-size:1.05rem;">${fUser.score || 0} 點</td>
+                    <td>
+                        <button class="action-btn-sm btn-add-pts" onclick="window.modifyPoints('${uid}', 'add', '${realName}', ${fUser.score || 0})">➕ 結算表單</button>
+                        <button class="action-btn-sm btn-deduct-pts" onclick="window.modifyPoints('${uid}', 'deduct', '${realName}', ${fUser.score || 0})">扣點</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if(count === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">本年級目前無已登入的學生資料。</td></tr>`;
+            }
+        };
+
+        // ➕ 核心功能：公式加點機（答對題數 / 總題數 * 10 之後四捨五入）
+        window.modifyPoints = async function(uid, type, realName, currentScore) {
+            if (type === 'deduct') {
+                const { value: amountStr } = await Swal.fire({
+                    title: `💸 手動為【${realName}】扣除金幣`,
+                    input: 'number', inputPlaceholder: '請輸入扣除點數',
+                    showCancelButton: true, confirmButtonColor: '#e74c3c'
+                });
+                const amount = parseInt(amountStr, 10);
+                if (!amount || amount <= 0) return;
+
+                await updateDoc(doc(db, "users", uid), { score: Math.max(0, currentScore - amount) });
+                return Swal.fire('操作成功！', `已扣除 ${realName} ${amount} 點！`, 'success');
+            }
+
+            if (type === 'add') {
+                const { value: formValues } = await Swal.fire({
+                    title: `🏆 結算【${realName}】的 Google 表單金幣`,
+                    html:
+                        `<p style="font-size:0.85rem; color:#666; margin-bottom:10px;">請輸入此學生的表單實際分數：</p>` +
+                        `<input id="swal-correct" class="swal2-input" type="number" placeholder="答對題數 (如: 19)">` +
+                        `<input id="swal-total" class="swal2-input" type="number" placeholder="總題數 (如: 78)">`,
+                    focusConfirm: false, showCancelButton: true, confirmButtonColor: '#2ecc71', confirmButtonText: '⚡ 智慧公式換算',
+                    preConfirm: () => {
+                        return [
+                            parseInt(document.getElementById('swal-correct').value, 10),
+                            parseInt(document.getElementById('swal-total').value, 10)
+                        ]
+                    }
+                });
+
+                if (!formValues) return;
+                const [correct, total] = formValues;
+
+                if (isNaN(correct) || isNaN(total) || total <= 0 || correct < 0) {
+                    return Swal.fire('填寫錯誤', '請輸入正確的整數題數！', 'warning');
+                }
+                if (correct > total) {
+                    return Swal.fire('數據矛盾', '答對題數不可大於總題數！', 'error');
+                }
+
+                // 🎯 核心計算：答對率 * 10 之後進行標準四捨五入！
+                const percentage = correct / total;
+                const finalCoins = Math.round(percentage * 10);
+
+                const { value: reason } = await Swal.fire({
+                    title: '請填寫發放備註',
+                    input: 'text',
+                    inputValue: `表單測驗表現 (${correct}/${total} 題，答對率 ${Math.round(percentage * 100)}%)`,
+                    showCancelButton: true
+                });
+
+                if (reason === undefined) return;
+
+                // 📡 即時同步發送進 Firebase
+                await updateDoc(doc(db, "users", uid), { score: currentScore + finalCoins });
+
+                Swal.fire({
+                    title: '🎉 金幣發放成功！',
+                    html: `學生答對率為：<b>${Math.round(percentage * 100)}%</b><br>` +
+                          `依四捨五入公式，已成功幫 <b>${realName}</b> 增加 <b style="color:#27ae60; font-size:1.2rem;">+${finalCoins}</b> 點金幣！`,
+                    icon: 'success'
+                });
             }
         };
     </script>
