@@ -224,7 +224,7 @@ function updateStudentUI() {
     if (avatar && userData.avatarUrl) avatar.src = userData.avatarUrl;
 
     // 🎒 🔥 【核心修正】即時重刷並渲染學生的實體背包！
-    const backpackGrid = document.getElementById('userBackpackGrid');
+    const backpackGrid = document.getElementById('inventoryContainer');
     if (backpackGrid) {
         const myItems = userData.inventory || []; // 撈取雲端存好的禮物清單
         
