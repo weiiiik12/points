@@ -210,20 +210,42 @@ async function enterSystem(userCleanId, realName) {
     renderLevelGrid(); 
 }
 
+// 🔄 更新學生頂部資訊欄與「榮譽背包小櫥窗」
 function updateStudentUI() {
     if (!userData) return;
     const nameDisplay = document.getElementById('childNameDisplay');
     const scoreDisplay = document.getElementById('scoreDisplay');
     const userEmail = document.getElementById('userEmail');
     const avatar = document.getElementById('userAvatar');
+
     if (nameDisplay) nameDisplay.innerText = `${userData.nickname} (${userData.realName})`;
     if (scoreDisplay) scoreDisplay.innerText = userData.score || 0;
     if (userEmail) userEmail.innerText = `🟢 在線：${userData.realName}`;
     if (avatar && userData.avatarUrl) avatar.src = userData.avatarUrl;
-}
 
-// 🗺️ 智慧型：對照 Firebase 雲端題庫進行「學生年級自動篩選」與「多表單隨機抽題」
-// 🗺️ 智慧型：對照 Firebase 雲端題庫進行「學生年級自動篩選」與「多表單隨機抽題」
+    // 🎒 🔥 【核心修正】即時重刷並渲染學生的實體背包！
+    const backpackGrid = document.getElementById('userBackpackGrid');
+    if (backpackGrid) {
+        const myItems = userData.inventory || []; // 撈取雲端存好的禮物清單
+        
+        if (myItems.length === 0) {
+            backpackGrid.innerHTML = `<p style="color:#999; grid-column: span 2; text-align:center; font-size:0.9rem; padding:10px;">背包空空如也，快去商店逛逛吧！</p>`;
+        } else {
+            let backpackHtml = '';
+            myItems.forEach(item => {
+                backpackHtml += `
+                    <div style="background:#f8f9fa; border:2px solid #e2e8f0; border-radius:12px; padding:10px; text-align:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position:relative;">
+                        <span style="font-size:1.8rem;">🎁</span>
+                        <h5 style="margin:6px 0 2px 0; font-size:0.82rem; color:#2d3436; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.title}</h5>
+                        <small style="color:#a0aec0; font-size:0.65rem; display:block;">📅 ${item.date || '兌換時間'}</small>
+                        <div style="margin-top:6px; background:#9b59b6; color:white; font-size:0.65rem; font-weight:bold; padding:2px 0; border-radius:4px;">未領取</div>
+                    </div>
+                `;
+            });
+            backpackGrid.innerHTML = backpackHtml;
+        }
+    }
+}
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
