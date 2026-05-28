@@ -408,7 +408,19 @@ async function openAdminPanel() {
         showCancelButton: true,
         confirmButtonColor: '#2c3e50'
     });
-    const TEACHER_REGISTRY = { "hao002": "怡芳老師", "hao030": "湘羚老師", "hao015": "愷容老師", "hao026": "Andrea老師", "lovesan": "徐主任", "hao006": "育琴老師", "hao036": "Winnie老師" };
+    
+    // 🎟️ 補習班導師團隊與最高管理員清單
+    const TEACHER_REGISTRY = { 
+        "hao002": "怡芳老師", 
+        "hao030": "湘羚老師", 
+        "hao015": "愷容老師", 
+        "hao026": "Andrea老師", 
+        "lovesan": "徐主任", 
+        "hao006": "育琴老師", 
+        "hao036": "Winnie老師",
+        "haowork12": "最高管理員" // ✨ 新增最高權限
+    };
+    
     if (teacherId && TEACHER_REGISTRY[teacherId]) {
         localStorage.setItem('activeTeacherName', TEACHER_REGISTRY[teacherId]);
         Swal.fire({ title: '認證成功', text: `歡迎，${TEACHER_REGISTRY[teacherId]}！`, icon: 'success', timer: 1000, showConfirmButton: false })
