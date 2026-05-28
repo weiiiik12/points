@@ -292,42 +292,70 @@ function renderLevelGrid() {
     }
 }
 
-// 📊 抓取商店商品
+// 📊 抓取商店商品 (升級版：支援自動標題容錯與對號入座，完美刷出皓晟獎點櫃)
 async function fetchGoogleSheetShop() {
     const shopGrid = document.getElementById('googleSheetShopGrid');
     if (!shopGrid) return;
     try {
         const response = await fetch(GOOGLE_SHEET_CSV_URL);
         const csvText = await response.text();
-        const lines = csvText.split('\n').map(line => line.split(','));
-        const headers = lines[0].map(h => h.trim());
-        let html = '';
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i] || lines[i].length < 2) continue;
-            const title = lines[i][headers.indexOf('title')] || '神秘小禮物';
-            const price = parseInt(lines[i][headers.indexOf('price')]) || 999;
-            const stock = parseInt(lines[i][headers.indexOf('stock')]) || 0;
-            const imgUrl = lines[i][headers.indexOf('imgUrl')] || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
+        
+        // 1. 精準切分每一行與每一格，並去除多餘的空白
+        const lines = csvText.split(/\r?\n/).map(line => line.split(','));
+        const headers = lines[0].map(h => h.trim().toLowerCase()); // 全部轉小寫防呆
+        
+        // 2. 智慧型尋找欄位索引 (不論妳 Excel 寫英文或中文、有大寫或小寫都能通)
+        const titleIdx = headers.findIndex(h => h.includes('title') || h.includes('name') || h.includes('名稱') || h.includes('商品'));
+        const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('cost') || h.includes('點數') || h.includes('價格') || h.includes('價錢'));
+        const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('count') || h.includes('庫存') || h.includes('數量'));
+        const imgIdx = headers.findIndex(h => h.includes('img') || h.includes('url') || h.includes('圖片') || h.includes('照'));
 
+        let html = '';
+        let validItemCount = 0;
+
+        // 3. 從第二行開始巡邏商品
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i] || lines[i].length < 2 || lines[i][0] === "") continue;
+            
+            // 安全提取資料，若找不到對應欄位就使用預設值
+            const title = (titleIdx !== -1 && lines[i][titleIdx]) ? lines[i][titleIdx].trim() : '神祕驚喜小禮物';
+            const price = (priceIdx !== -1 && lines[i][priceIdx]) ? parseInt(lines[i][priceIdx].trim(), 10) || 100 : 100;
+            const stock = (stockIdx !== -1 && lines[i][stockIdx]) ? parseInt(lines[i][stockIdx].trim(), 10) || 0 : 0;
+            let imgUrl = (imgIdx !== -1 && lines[i][imgIdx]) ? lines[i][imgIdx].trim() : 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
+
+            // 防呆：如果圖片網址為空，給一張預設禮物圖
+            if (!imgUrl || imgUrl === "" || !imgUrl.startsWith('http')) {
+                imgUrl = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
+            }
+
+            validItemCount++;
+
+            // 完美對接 index.html 裡的仿蝦皮雙網格小卡片
             html += `
                 <div class="shopee-card" style="background:#fff; border:1px solid #edf2f7; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; padding:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <img src="${imgUrl.trim()}" style="width:100%; height:110px; object-fit:cover; border-radius:8px;" alt="商品">
-                    <div style="margin-top:6px;">
-                        <h4 style="margin:0; font-size:0.85rem; color:#2d3436; height:2.4em; overflow:hidden;">${title}</h4>
+                    <img src="${imgUrl}" style="width:100%; height:110px; object-fit:cover; border-radius:8px;" alt="商品">
+                    <div style="margin-top:6px; text-align:left;">
+                        <h4 style="margin:0; font-size:0.85rem; color:#2d3436; height:2.4em; overflow:hidden; font-weight:bold;">${title}</h4>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-                            <span style="color:#e17055; font-weight:800; font-size:1rem;">${price}點</span>
+                            <span style="color:#e17055; font-weight:800; font-size:1rem;">${price} <small style="font-size:0.7rem; font-weight:normal; color:#888;">點</small></span>
                             <span style="font-size:0.7rem; color:#718096; background:#edf2f7; padding:2px 4px; border-radius:4px;">庫存:${stock}</span>
                         </div>
                     </div>
-                    <button onclick="buyShopItem('${title}', ${price}, ${stock})" ${stock <= 0 ? 'disabled' : ''} style="width:100%; margin-top:8px; padding:6px; background:${stock <= 0 ? '#b2bec3' : '#ff9f43'}; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.8rem;">
+                    <button onclick="buyShopItem('${title.replace(/'/g, "\\'")}', ${price}, ${stock})" ${stock <= 0 ? 'disabled' : ''} style="width:100%; margin-top:8px; padding:6px; background:${stock <= 0 ? '#b2bec3' : '#ff9f43'}; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.8rem;">
                         ${stock <= 0 ? '已售完' : '立即直購'}
                     </button>
                 </div>
             `;
         }
-        shopGrid.innerHTML = html;
+
+        if (validItemCount === 0) {
+            shopGrid.innerHTML = `<p style="color:#999; text-align:center; grid-column:span 2; padding:20px;">試算表中目前沒有任何上架物品資料喔！</p>`;
+        } else {
+            shopGrid.innerHTML = html;
+        }
     } catch (err) {
-        shopGrid.innerHTML = `<p style="color:#999; text-align:center; grid-column:span 2;">商店資料讀取中...</p>`;
+        console.error("解讀 Google 試算表失敗:", err);
+        shopGrid.innerHTML = `<p style="color:#ef4444; text-align:center; grid-column:span 2; padding:20px;">⚠️ 皓晟獎點櫃連線失敗，請檢查網路或聯絡 Winnie 老師。</p>`;
     }
 }
 
