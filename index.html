@@ -8,14 +8,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* 🌟 1. 確保登入前，主程式絕對隱藏 */
         #mainAppContainer { display: none; }
-
-        /* 🌟 2. 完美還原妳最愛的絕美登入卡片質感 */
         #loginOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #f8f9fa; /* 乾淨的高級灰白底色 */
-            z-index: 9999; display: flex; justify-content: center; align-items: center;
+            background: #f8f9fa; z-index: 9999; display: flex; justify-content: center; align-items: center;
         }
         .login-card {
             background: white; padding: 40px 30px; border-radius: 20px;
@@ -37,36 +33,29 @@
 </head>
 <body>
 
-<!-- 🔑 絕美的登入視窗 -->
 <div id="loginOverlay">
     <div class="login-card">
         <h2>皓孩子獎勵 App</h2>
         <p>請登入以同步雲端資料</p>
         <input type="email" id="emailInput" class="login-input" placeholder="電子信箱 (Email)">
         <input type="password" id="passwordInput" class="login-input" placeholder="密碼 (至少6位數)">
-        
         <div class="btn-group-login">
             <button id="btnLogin" class="btn-login">登入</button>
             <button id="btnRegister" class="btn-register" onclick="Swal.fire('提示', '請直接使用老師派發的帳號登入喔！', 'info')">註冊新帳號</button>
         </div>
-        
         <button class="btn-forgot" onclick="Swal.fire('提示', '忘記密碼請直接詢問 Winnie 老師喔！', 'info')">忘記密碼？</button>
-        
-        <!-- 完美保留的訪客按鈕 -->
         <button id="btnGuest" class="btn-guest">👻 我是遊客 (免登入試玩)</button>
-        
         <p id="loginError" style="color:#e74c3c; font-size:0.85rem; margin-top:15px; font-weight:bold;"></p>
     </div>
 </div>
 
-<!-- 📦 將前台所有內容包在這個大箱子裡，登入成功前絕對隱藏 -->
 <div id="mainAppContainer">
 
     <div class="user-bar">
         <span id="userEmail">未登入</span>
         <div>
-            <button class="btn-logout" style="background:#f1c40f; color:#333; margin-right:5px; font-weight:bold;">🏆 我的帳號</button>
-            <button class="btn-logout" style="background:#d63031;" onclick="window.handleLogout()">登出</button>
+            <button class="nav-btn btn-logout" id="btnMyAccountNav" style="background:#f1c40f; color:#333; margin-right:5px; font-weight:bold; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer;" onclick="switchTab('tab-account')">🏆 我的帳號</button>
+            <button class="btn-logout" style="background:#d63031; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;" onclick="window.handleLogout()">登出</button>
         </div>
     </div>
 
@@ -83,15 +72,13 @@
     </div>
 
     <div class="nav">
-        <button class="nav-btn active" onclick="switchTab('tab-quiz')">🎯 挑戰小學堂</button>
-        <button class="nav-btn" onclick="switchTab('tab-shop')">🎁 皓商店</button>
-        <button class="nav-btn" onclick="switchTab('tab-bank')">🏦 皓銀行</button>
-        <button class="nav-btn" onclick="switchTab('tab-forum')">👥 校園廣場</button>
-        <button class="nav-btn" onclick="switchTab('tab-market')">⚖️ 交易所</button>
-        <button class="nav-btn" onclick="switchTab('tab-achieve')">🏆 榮譽成就</button>
+        <button class="nav-btn active" id="btn-tab-quiz" onclick="switchTab('tab-quiz')">🎯 挑戰小學堂</button>
+        <button class="nav-btn" id="btn-tab-shop" onclick="switchTab('tab-shop')">🎁 皓商店</button>
+        <button class="nav-btn" id="btn-tab-bank" onclick="switchTab('tab-bank')">🏦 皓銀行</button>
+        <button class="nav-btn" id="btn-tab-forum" onclick="switchTab('tab-forum')">👥 校園廣場</button>
+        <button class="nav-btn" id="btn-tab-market" onclick="switchTab('tab-market')">⚖️ 交易所</button>
     </div>
 
-    <!-- === 挑戰小學堂分頁 === -->
     <div id="tab-quiz" class="section active">
         <div class="school-card-box" style="border-left: 5px solid #6c5ce7;">
             <h3 class="school-title" style="color:#6c5ce7;">⚔️ 知識王大冒險 (全科挑戰)</h3>
@@ -116,7 +103,7 @@
 
         <div class="school-card-box" style="border-left: 5px solid #00b894;">
             <h3 class="school-title" style="color:#00b894;">👥 好友組隊闖關</h3>
-            <p class="school-desc">輸入同學的隊伍房間號碼，2~8人綁定挑戰，通關全員同時獲得獎勵報酬！</p>
+            <p class="school-desc">2~8人綁定挑戰，通關全員同時獲得獎勵報酬！</p>
             <div style="display:flex; gap:10px;">
                 <input type="text" id="teamRoomInput" class="school-input" placeholder="請輸入同學的 Room ID">
                 <button class="btn-school-action" style="width:100px; background:#00b894;" onclick="joinTeamChallenge()">綁定隊伍</button>
@@ -126,14 +113,38 @@
         <div class="school-card-box" style="border-left: 5px solid #e17055; background: #fff5f5;">
             <div class="school-badge" style="background:#e17055;" id="weekendBadge">LIVE 翻倍中</div>
             <h3 class="school-title" style="color:#e17055;">⏰ 週末挑戰限時開啟</h3>
-            <p class="school-desc">每逢週六、日自動解鎖「隱藏限定題庫」！週六日答題獲取的點數好康通通自動翻倍！</p>
+            <p class="school-desc">每逢週六、日自動解鎖「隱藏限定題庫」！點數自動翻倍！</p>
             <button class="btn-school-action" style="background: linear-gradient(135deg, #e17055 0%, #ff7675 100%);" onclick="startWeekendQuiz()">進入週末限時副本</button>
         </div>
     </div>
 
-    <!-- === 皓商店分頁 === -->
     <div id="tab-shop" class="section">
-        <div class="school-card-box" style="border-left: 5px solid #4a90e2; background: #f0f7ff;">
+        <div class="school-card-box" style="border-left: 5px solid #ff9f43;">
+            <h3 class="school-title" style="color:#ff9f43;">🎲 幸運盲盒抽獎</h3>
+            <button class="big-btn" style="background: linear-gradient(135deg, #ff9f43 0%, #ee5253 100%); margin: 10px 0;" onclick="window.startGacha && window.startGacha()">啟動幸運抽獎 (消耗 50 點)</button>
+            
+            <h3 class="school-title" style="color:#2d3436; margin-top:25px; font-size:1.1rem;">🏪 皓晟獎點櫃櫥窗</h3>
+            <div id="googleSheetShopGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <div id="tab-bank" class="section">
+        <div class="bank-card"><div class="bank-rate">🏦 皓銀行</div><div class="bank-est">💰 活存點數載入中...</div></div>
+    </div>
+
+    <div id="tab-forum" class="section">
+        <div class="social-header"><div class="post-input-container"><input type="text" id="postInput" class="post-input" placeholder="想跟全班同學或導師說什麼嗎？"><button class="btn-post" onclick="submitPost()">發送</button></div></div>
+        <div id="postList"></div>
+    </div>
+
+    <div id="tab-market" class="section">
+        <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #d35400; font-size: 0.9rem; font-weight: bold;">⚠️ 拍賣成功後，系統將自動扣除 10% 手續費！</div>
+        <div id="marketList"></div>
+    </div>
+
+    <div id="tab-account" class="section">
+        
+        <div class="school-card-box" style="border-left: 5px solid #4a90e2; background: #f0f7ff; margin-bottom: 20px;">
             <h3 class="school-title" style="color:#4a90e2;">🎟️ 老師獎勵兌換碼</h3>
             <div style="display:flex; gap:10px;">
                 <input type="text" id="promoCodeInput" class="school-input" style="text-transform: uppercase;" placeholder="輸入老師給的神祕序號">
@@ -141,29 +152,21 @@
             </div>
         </div>
 
-        <div class="school-card-box" style="border-left: 5px solid #ff9f43;">
-            <h3 class="school-title" style="color:#ff9f43;">🎲 幸運盲盒抽獎</h3>
-            <button class="big-btn" style="background: linear-gradient(135deg, #ff9f43 0%, #ee5253 100%); margin: 10px 0;" onclick="window.startGacha && window.startGacha()">啟動幸運抽獎 (消耗 50 點)</button>
-            <h3 class="school-title" style="color:#2d3436; margin-top:25px; font-size:1.1rem;">🏪 皓晟獎點櫃</h3>
-            <div id="googleSheetShopGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px;"></div>
-            <h3 class="school-title" style="color:#636e72; margin-top:30px;">🎒 我的背包</h3>
+        <div class="school-card-box" style="border-left: 5px solid #9b59b6; margin-bottom: 20px;">
+            <h3 class="school-title" style="color:#9b59b6;">🎒 蝦皮特惠風：我的榮譽背包</h3>
+            <p class="school-desc">這裡放著妳直購兌換到的實體票券小禮物。</p>
             <div id="inventoryContainer"></div>
         </div>
-    </div>
 
-    <!-- === 皓銀行、廣場、交易所、成就 (保留結構) === -->
-    <div id="tab-bank" class="section">
-        <div class="bank-card"><div class="bank-rate">🏦 皓銀行</div><div class="bank-est">💰 活存點數載入中...</div></div>
+        <div class="school-card-box" style="border-left: 5px solid #f1c40f;">
+            <h3 class="school-title" style="color:#f1c40f;">🏅 我的榮譽成就里程碑</h3>
+            <p class="school-desc">紀錄妳在補習班達成的所有榮耀事蹟！</p>
+            <div id="achievementContainer">
+                <p style="color:#999; text-align:center; font-size:0.85rem; padding:10px;">🏆 各科大師與全勤成就獎牌建置中...</p>
+            </div>
+        </div>
+
     </div>
-    <div id="tab-forum" class="section">
-        <div class="social-header"><div class="post-input-container"><input type="text" id="postInput" class="post-input" placeholder="想跟全班同學或導師說什麼嗎？"><button class="btn-post" onclick="submitPost()">發送</button></div></div>
-        <div id="postList"></div>
-    </div>
-    <div id="tab-market" class="section">
-        <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #d35400; font-size: 0.9rem; font-weight: bold;">⚠️ 拍賣成功後，系統將自動扣除 10% 手續費！</div>
-        <div id="marketList"></div>
-    </div>
-    <div id="tab-achieve" class="section"><div id="achievementContainer"></div></div>
 
     <footer class="admin-footer" style="margin-top: 40px; text-align: center; padding-bottom: 20px;">
         <button class="btn-settings" style="background: #2c3e50; color: white; border: none; padding: 10px 24px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 1rem;">⚙️ 進入管理後台</button>
