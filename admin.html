@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAGO 2.0 | 補習班雲端導師管理後台</title>
+    <title>皓老師管理後台</title>
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -46,7 +46,7 @@
 <body>
 
     <nav class="admin-navbar">
-        <div style="font-size: 1.2rem; font-weight: bold;">🎒 HAGO 2.0 導師控盤雲端後台</div>
+        <div style="font-size: 1.2rem; font-weight: bold;">🎒 皓老師管理後台</div>
         <div>
             <span id="activeTeacherTitle" style="margin-right: 15px; font-weight: bold; color: #f1c40f;">載入中...</span>
             <button onclick="location.href='index.html'" style="padding: 6px 12px; background: #e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight: bold;">返回學生前台</button>
@@ -57,14 +57,11 @@
         
         <div class="welcome-box">
             <h2 style="border:none; padding:0; margin-bottom:5px;">👋 歡迎來到班級經營控盤面板</h2>
-            <p style="margin:0; color:#666; font-size:0.9rem;">
-                本系統將根據您的登入權限自動開放對應的管理功能。
-            </p>
         </div>
 
         <div class="grid-panel">
             
-            <!-- 🌟 最高管理員專屬面板 (僅 haowork12 可見) -->
+            <!-- 🌟 最高管理員專屬面板 -->
             <div class="card card-super admin-only-block" id="superAdminCard" style="display:none; grid-column: span 2;">
                 <h2 class="super-title">👑 最高管理員專屬：系統核心設定</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
