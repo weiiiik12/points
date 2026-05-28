@@ -4,6 +4,7 @@ import { signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/1
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentUser = null;
+let currentUid = null; // ✨ 新增：用來儲存學生的專屬 ID給組隊系統用
 let userRef = null;
 let userData = null;
 let currentSelectedSubject = 'chi'; 
@@ -18,7 +19,7 @@ const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PAC
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadExcelCredentials(); 
-    checkAutoLogin();             
+    checkAutoLogin();              
 
     initAuthButtons();
     checkWeekendStatus();
@@ -139,6 +140,8 @@ async function loginAsGuest() {
 
 // 🚀 通過驗證放行 (已補上年級儲存與記憶機制)
 async function enterSystem(userCleanId, realName) {
+    currentUid = userCleanId; // 💡 新增：把專屬 ID 存起來給組隊系統用
+
     const loginOverlay = document.getElementById('loginOverlay');
     const mainContainer = document.getElementById('mainAppContainer');
 
@@ -211,7 +214,6 @@ async function enterSystem(userCleanId, realName) {
 }
 
 // 🔄 更新學生頂部資訊欄與「榮譽背包小櫥窗」
-// 🔄 更新學生頂部資訊欄與「蝦皮票券風榮譽背包」
 function updateStudentUI() {
     if (!userData) return;
     const nameDisplay = document.getElementById('childNameDisplay');
@@ -239,23 +241,18 @@ function updateStudentUI() {
                 const isClaimed = item.status === "已領取"; // 判斷是否已經找老師兌換過
                 
                 backpackHtml += `
-                        
-                        <!-- 🎟️ 左側：亮橘色鋸齒票券頭 (放商品代表圖片) -->
                         <div style="background: ${isClaimed ? '#b2bec3' : 'linear-gradient(135deg, #ff7675, #ff9f43)'}; width: 85px; min-height: 95px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; position: relative; flex-shrink: 0;">
                             <span style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">🎁</span>
                             <small style="font-size: 0.65rem; font-weight: bold; margin-top: 4px; letter-spacing: 1px;">官方正品</small>
-                            <!-- 智慧鋸齒造型裝飾 -->
                             <div style="position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; background-image: radial-gradient(circle, #f8f9fa 3px, transparent 4px); background-size: 12px 12px;"></div>
                         </div>
 
-                        <!-- 📝 中間：詳細資訊欄位 (名稱、日期、價值認證) -->
                         <div style="flex: 1; padding: 10px 15px; text-align: left; display: flex; flex-direction: column; justify-content: center; min-width: 0;">
                             <h4 style="margin: 0 0 4px 0; font-size: 1.05rem; color: #2d3436; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</h4>
                             <p style="margin: 0 0 2px 0; font-size: 0.75rem; color: #718096; font-weight: 500;">📅 兌換時間：${item.date || '未知'}</p>
                             <p style="margin: 0; font-size: 0.75rem; color: #ff7675; font-weight: bold;">💎 價值：認證專屬獎勵</p>
                         </div>
 
-                        <!-- ⚡ 右側：提醒/領取按鈕分流 -->
                         <div style="padding-right: 15px; flex-shrink: 0;">
                             ${isClaimed ? `
                                 <button style="background: #b2bec3; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: not-allowed; box-shadow: none;">已核銷</button>
@@ -400,10 +397,34 @@ async function fetchGoogleSheetShop() {
 
 window.buyShopItem = async function(title, price, stock) {
     if (!checkGuestPermission() || !userData) return;
+
+    // ✨ 新增：背包上限檢查邏輯
+    const currentInventory = userData.inventory || [];
+    if (currentInventory.length >= 10) {
+        return Swal.fire({
+            title: '🎒 背包已滿', 
+            text: '妳的榮譽背包已經裝滿 10 個物品囉！請先拿去找老師核銷兌換，清出空間再來買吧。', 
+            icon: 'warning',
+            confirmButtonColor: '#e17055'
+        });
+    }
+
     if (userData.score < price) return Swal.fire('點數不足', `還差 ${price - userData.score} 點！`, 'warning');
-    Swal.fire({ title: '確定兌換？', text: `是否扣除 ${price} 點兌換【${title}】？`, icon: 'question', showCancelButton: true }).then(async (result) => {
+    
+    Swal.fire({ 
+        title: '確定兌換？', 
+        text: `是否扣除 ${price} 點兌換【${title}】？`, 
+        icon: 'question', 
+        showCancelButton: true,
+        confirmButtonColor: '#00b894'
+    }).then(async (result) => {
         if (result.isConfirmed) {
-            await updateDoc(userRef, { score: userData.score - price, inventory: [...(userData.inventory || []), { title: title, date: new Date().toLocaleDateString() }], history: [...(userData.history || []), { date: new Date().toLocaleDateString(), amount: -price, reason: `[直購] 兌換 ${title}` }] });
+            // 寫入 Firebase，同時加上 status: "未領取" 供背包介面判斷
+            await updateDoc(userRef, { 
+                score: userData.score - price, 
+                inventory: [...currentInventory, { title: title, date: new Date().toLocaleDateString(), status: "未領取" }], 
+                history: [...(userData.history || []), { date: new Date().toLocaleDateString(), amount: -price, reason: `[直購] 兌換 ${title}` }] 
+            });
             Swal.fire('🎉 兌換成功！', `禮物已放進背包。`, 'success');
         }
     });
@@ -414,7 +435,7 @@ window.switchTab = function(tabId) { document.querySelectorAll('.section').forEa
 function checkWeekendStatus() { const today = new Date(); const isWeekend = (today.getDay() === 0 || today.getDay() === 6); const badge = document.getElementById('weekendBadge'); if (badge) badge.style.display = isWeekend ? 'inline-block' : 'none'; return isWeekend; }
 window.redeemPromoCode = async function() { Swal.fire('提示', '請向導師領取最新兌換碼。', 'info'); };
 window.startWeekendQuiz = function() { Swal.fire('未到開啟時間', '週末才會限時開放隱藏題庫喔！', 'info'); };
-window.joinTeamChallenge = function() { Swal.fire('👥 綁定成功', `已成功加入房間！`, 'success'); };
+
 async function openAdminPanel() {
     if (!checkGuestPermission()) return;
     const { value: teacherId } = await Swal.fire({ title: '🔑 導師安全認證', input: 'password', inputPlaceholder: '請輸入導師固定 ID...', showCancelButton: true, confirmButtonColor: '#2c3e50' });
@@ -422,3 +443,183 @@ async function openAdminPanel() {
     if (teacherId && TEACHER_REGISTRY[teacherId]) { localStorage.setItem('activeTeacherName', TEACHER_REGISTRY[teacherId]); Swal.fire({ title: '認證成功', text: `歡迎！`, icon: 'success', timer: 1000, showConfirmButton: false }).then(() => { window.location.href = 'admin.html'; }); }
 }
 window.handleLogout = function() { localStorage.removeItem('hago_logged_in_email'); localStorage.removeItem('hago_logged_in_guest'); signOut(auth).then(() => { location.reload(); }); };
+
+// ==========================================
+// ⚔️ 知識王對戰系統核心邏輯
+// ==========================================
+
+// 🎲 產生 6 位數專屬房號
+function generateRoomCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// 👑 房主：建立房間
+window.createTeamRoom = async function() {
+    if (!checkGuestPermission() || !userData) return;
+    
+    const roomCode = generateRoomCode();
+    const roomRef = doc(db, "team_challenges", roomCode);
+
+    try {
+        await setDoc(roomRef, {
+            status: "waiting", // 狀態：waiting, playing, finished
+            hostUid: currentUid,
+            createdAt: Date.now(),
+            players: {
+                [currentUid]: {
+                    name: userData.realName,
+                    isReady: false,
+                    score: 0
+                }
+            }
+        });
+        // 建立成功後，房主進入等待室
+        enterWaitingRoom(roomCode, true);
+    } catch (err) {
+        Swal.fire('建立失敗', err.message, 'error');
+    }
+};
+
+// 🏃 玩家：輸入房號加入房間
+window.joinTeamChallenge = async function() {
+    if (!checkGuestPermission() || !userData) return;
+    
+    const inputEl = document.getElementById('teamRoomInput');
+    const roomCode = inputEl ? inputEl.value.trim() : '';
+
+    if (!roomCode || roomCode.length !== 6) {
+        return Swal.fire('格式錯誤', '請輸入同學提供的 6 位數房號！', 'warning');
+    }
+
+    const roomRef = doc(db, "team_challenges", roomCode);
+    const roomSnap = await getDoc(roomRef);
+
+    if (!roomSnap.exists()) {
+        return Swal.fire('找不到房間', '這間教室不存在，請確認房號是否正確！', 'error');
+    }
+
+    const roomData = roomSnap.data();
+    
+    if (roomData.status !== "waiting") {
+        return Swal.fire('來晚了', '這個房間已經開始對戰或結束囉！', 'warning');
+    }
+    if (Object.keys(roomData.players).length >= 2) {
+        return Swal.fire('房間已滿', '這個房間已經有兩個人囉，去別間看看吧！', 'warning');
+    }
+
+    try {
+        // 利用 Firebase 的「點記法(dot notation)」精準加入玩家
+        await updateDoc(roomRef, {
+            [`players.${currentUid}`]: {
+                name: userData.realName,
+                isReady: false,
+                score: 0
+            }
+        });
+        // 加入成功後，進入等待室
+        enterWaitingRoom(roomCode, false);
+    } catch (err) {
+        Swal.fire('加入失敗', err.message, 'error');
+    }
+};
+
+// 📡 交誼等待室 (即時雷達監聽)
+let unsubscribeRoom = null; 
+
+function enterWaitingRoom(roomCode, isHost) {
+    const roomRef = doc(db, "team_challenges", roomCode);
+
+    Swal.fire({
+        title: `⚔️ 知識王對戰室：${roomCode}`,
+        html: `<div id="waitingRoomContent" style="min-height: 100px;">正在建立連線...</div>`,
+        showCancelButton: true,
+        showConfirmButton: true,
+        confirmButtonText: '✋ 我準備好了！',
+        cancelButtonText: '離開房間',
+        confirmButtonColor: '#00b894',
+        cancelButtonColor: '#b2bec3',
+        allowOutsideClick: false,
+        didOpen: () => {
+            // 啟動 Firebase 24小時監聽
+            unsubscribeRoom = onSnapshot(roomRef, (snap) => {
+                if (!snap.exists()) {
+                    Swal.close();
+                    return Swal.fire('房間已解散', '房主已關閉這個對戰室。', 'info');
+                }
+                
+                const data = snap.data();
+                const players = data.players || {};
+                const playerKeys = Object.keys(players);
+
+                let html = `<p style="color:#666; font-size:0.9rem; margin-bottom:15px;">目前對戰人數：${playerKeys.length} / 2</p>`;
+                let allReady = true;
+
+                // 渲染玩家名單與準備狀態
+                playerKeys.forEach(uid => {
+                    const p = players[uid];
+                    const readyStatus = p.isReady 
+                        ? '<span style="color:#00b894; font-weight:bold; float:right;">(已準備 ✔️)</span>' 
+                        : '<span style="color:#e17055; float:right;">(裝備中...)</span>';
+                        
+                    html += `<div style="padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; text-align: left; border-left: 4px solid ${p.isReady ? '#00b894' : '#e17055'};">
+                        👤 <b>${p.name}</b> ${readyStatus}
+                    </div>`;
+                    
+                    if (!p.isReady) allReady = false;
+                });
+
+                document.getElementById('waitingRoomContent').innerHTML = html;
+
+                // 🚦 雙方都準備好，且狀態還是 waiting 時，房主發動開始！
+                if (playerKeys.length === 2 && allReady && data.status === "waiting") {
+                    if (isHost) {
+                        updateDoc(roomRef, { status: "playing" });
+                    }
+                }
+
+                // 💥 狀態變成 playing，全體強制跳轉進戰鬥畫面
+                if (data.status === "playing") {
+                    if (unsubscribeRoom) unsubscribeRoom(); // 關閉監聽器避免耗能
+                    Swal.fire({
+                        title: '⚔️ 戰鬥開始！', 
+                        text: '即將進入知識王擂台...', 
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // 這裡未來可以替換成你的題目介面跳轉
+                        console.log("導航至對戰畫面...");
+                    });
+                }
+            });
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            // 學生按下「我準備好了」
+            await updateDoc(roomRef, {
+                [`players.${currentUid}.isReady`]: true
+            });
+            
+            // 換成一個只能「取消準備」的等待視窗
+            Swal.fire({
+                title: `⚔️ 等待對手準備中...`,
+                html: `<div style="padding: 20px;">大家都在等妳喔！</div>`,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: '取消準備',
+                cancelButtonColor: '#e74c3c',
+                allowOutsideClick: false
+            }).then(async (res) => {
+                if (res.dismiss === Swal.DismissReason.cancel) {
+                    // 取消準備，並把狀態改回 false
+                    await updateDoc(roomRef, { [`players.${currentUid}.isReady`]: false });
+                    if (unsubscribeRoom) unsubscribeRoom();
+                }
+            });
+            
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+            // 離開房間
+            if (unsubscribeRoom) unsubscribeRoom();
+        }
+    });
+}
