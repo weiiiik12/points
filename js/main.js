@@ -299,7 +299,7 @@ function renderLevelGrid() {
     }
 }
 
-// 📊 抓取商店商品 (超級自動容錯與智能欄位配對版)
+// 📊 抓取商店商品 (地表最強全自動容錯與防破版對接版)
 async function fetchGoogleSheetShop() {
     const shopGrid = document.getElementById('googleSheetShopGrid');
     if (!shopGrid) return;
@@ -307,11 +307,13 @@ async function fetchGoogleSheetShop() {
         const response = await fetch(GOOGLE_SHEET_CSV_URL);
         const csvText = await response.text();
         
-        // 1. 使用安全解析器拆分行與格
-        const rawLines = csvText.split(/\r?\n/);
+        // 1. 智慧型預處理：清除所有隱形的 \r，並用標準的 \n 切割
+        const rawLines = csvText.replace(/\r/g, "").split('\n');
+        
+        // 2. 抓取並安全解析標題列
         const headers = parseCSVLineSafely(rawLines[0]).map(h => h.trim().toLowerCase());
         
-        // 2. 欄位自動對號入座
+        // 3. 欄位動態對號入座
         const titleIdx = headers.findIndex(h => h.includes('title') || h.includes('name') || h.includes('名稱') || h.includes('商品'));
         const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('cost') || h.includes('點數') || h.includes('價格') || h.includes('價錢'));
         const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('count') || h.includes('庫存') || h.includes('數量'));
@@ -321,15 +323,21 @@ async function fetchGoogleSheetShop() {
         let validItemCount = 0;
 
         for (let i = 1; i < rawLines.length; i++) {
-            if (!rawLines[i] || rawLines[i].trim() === "") continue;
-            const cols = parseCSVLineSafely(rawLines[i]);
-            if (cols.length < 2) continue;
+            const currentLineText = rawLines[i];
+            if (!currentLineText || currentLineText.trim() === "") continue; // 智慧忽略 Excel 底部的多餘空白行
             
+            const cols = parseCSVLineSafely(currentLineText);
+            
+            // 🛡️ 強大安全檢查：如果這一行的欄位數量遠少於標題，代表它是被換行截斷的殘留文字，直接防呆跳過！
+            if (cols.length < Math.max(1, headers.length - 2)) continue;
+            
+            // 安全抓取各欄位內容
             const title = (titleIdx !== -1 && cols[titleIdx]) ? cols[titleIdx].trim() : '神祕小禮物';
             const price = (priceIdx !== -1 && cols[priceIdx]) ? parseInt(cols[priceIdx].trim(), 10) || 50 : 50;
             const stock = (stockIdx !== -1 && cols[stockIdx]) ? parseInt(cols[stockIdx].trim(), 10) || 0 : 0;
-            let imgUrl = (imgIdx !== -1 && cols[imgIdx]) ? cols[imgIdx].trim() : 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
+            let imgUrl = (imgIdx !== -1 && cols[imgIdx]) ? cols[imgIdx].trim() : '';
 
+            // 如果圖片網址不合法或空白，給予精美的預設禮物盲盒圖片
             if (!imgUrl || imgUrl === "" || !imgUrl.startsWith('http')) {
                 imgUrl = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150';
             }
@@ -354,7 +362,7 @@ async function fetchGoogleSheetShop() {
         }
 
         if (validItemCount === 0) {
-            shopGrid.innerHTML = `<p style="color:#999; text-align:center; grid-column:span 2; padding:20px;">🛒 商店目前空空如也，等待老師上架中！</p>`;
+            shopGrid.innerHTML = `<p style="color:#999; text-align:center; grid-column:span 2; padding:20px;">🛒 皓晟獎點櫃目前空空的，等待老師上架中！</p>`;
         } else {
             shopGrid.innerHTML = html;
         }
