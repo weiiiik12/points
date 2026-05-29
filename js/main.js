@@ -537,8 +537,15 @@ window.joinTeamChallenge = async function() {
 // 📡 交誼等待室 (即時雷達監聽)
 let unsubscribeRoom = null; 
 
+// ==========================================
+// 📡 交誼等待室 (即時雷達監聽)
+// ==========================================
+let unsubscribeRoom = null; 
+let currentArenaRef = null; // 儲存當前房間的 Firebase 參考
+
 function enterWaitingRoom(roomCode, isHost) {
     const roomRef = doc(db, "team_challenges", roomCode);
+    currentArenaRef = roomRef;
 
     Swal.fire({
         title: `⚔️ 知識王對戰室：${roomCode}`,
@@ -551,7 +558,6 @@ function enterWaitingRoom(roomCode, isHost) {
         cancelButtonColor: '#b2bec3',
         allowOutsideClick: false,
         didOpen: () => {
-            // 啟動 Firebase 24小時監聽
             unsubscribeRoom = onSnapshot(roomRef, (snap) => {
                 if (!snap.exists()) {
                     Swal.close();
@@ -565,7 +571,6 @@ function enterWaitingRoom(roomCode, isHost) {
                 let html = `<p style="color:#666; font-size:0.9rem; margin-bottom:15px;">目前對戰人數：${playerKeys.length} / 2</p>`;
                 let allReady = true;
 
-                // 渲染玩家名單與準備狀態
                 playerKeys.forEach(uid => {
                     const p = players[uid];
                     const readyStatus = p.isReady 
@@ -583,35 +588,21 @@ function enterWaitingRoom(roomCode, isHost) {
 
                 // 🚦 雙方都準備好，且狀態還是 waiting 時，房主發動開始！
                 if (playerKeys.length === 2 && allReady && data.status === "waiting") {
-                    if (isHost) {
-                        updateDoc(roomRef, { status: "playing" });
-                    }
+                    if (isHost) updateDoc(roomRef, { status: "playing" });
                 }
 
                 // 💥 狀態變成 playing，全體強制跳轉進戰鬥畫面
                 if (data.status === "playing") {
-                    if (unsubscribeRoom) unsubscribeRoom(); // 關閉監聽器避免耗能
-                    Swal.fire({
-                        title: '⚔️ 戰鬥開始！', 
-                        text: '即將進入知識王擂台...', 
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        // 這裡未來可以替換成你的題目介面跳轉
-                        console.log("導航至對戰畫面...");
-                    });
+                    if (unsubscribeRoom) unsubscribeRoom(); // 關閉等待室監聽
+                    Swal.close();
+                    startBattleArena(roomCode, data); // ⚔️ 啟動擂台系統！
                 }
             });
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
-            // 學生按下「我準備好了」
-            await updateDoc(roomRef, {
-                [`players.${currentUid}.isReady`]: true
-            });
+            await updateDoc(roomRef, { [`players.${currentUid}.isReady`]: true });
             
-            // 換成一個只能「取消準備」的等待視窗
             Swal.fire({
                 title: `⚔️ 等待對手準備中...`,
                 html: `<div style="padding: 20px;">大家都在等妳喔！</div>`,
@@ -622,15 +613,187 @@ function enterWaitingRoom(roomCode, isHost) {
                 allowOutsideClick: false
             }).then(async (res) => {
                 if (res.dismiss === Swal.DismissReason.cancel) {
-                    // 取消準備，並把狀態改回 false
                     await updateDoc(roomRef, { [`players.${currentUid}.isReady`]: false });
                     if (unsubscribeRoom) unsubscribeRoom();
                 }
             });
-            
         } else if (result.dismiss === Swal.DismissReason.cancel) {
-            // 離開房間
             if (unsubscribeRoom) unsubscribeRoom();
         }
     });
+}
+
+// ==========================================
+// ⚔️ 知識王擂台對戰系統
+// ==========================================
+// 這裡先建立 3 題範例題庫，未來可以對接妳的全科題庫
+const BATTLE_QUESTIONS = [
+    { q: "自然科：下列哪一個動物是昆蟲？", options: ["蜘蛛", "蝴蝶", "蜈蚣", "蚯蚓"], ans: 1 },
+    { q: "英文科：老師說 'Listen carefully' 是什麼意思？", options: ["大聲朗讀", "仔細聆聽", "請回座位", "打開課本"], ans: 1 },
+    { q: "數學科：8 x 7 = ？", options: ["54", "56", "64", "62"], ans: 1 }
+];
+
+let arenaTimerInterval = null;
+let currentQuestionIndex = 0;
+let isAnswered = false;
+let myArenaTotalScore = 0; // 滿分 900 (3題 x 最高300分)
+
+window.startBattleArena = function(roomCode, roomData) {
+    // 1. 顯示全螢幕擂台
+    document.getElementById('battleArenaOverlay').style.display = 'flex';
+    
+    // 2. 找出對手的 UID 和雙方名字
+    const players = roomData.players;
+    const playerUids = Object.keys(players);
+    const opponentUid = playerUids.find(uid => uid !== currentUid);
+    const myName = players[currentUid].name;
+    const opponentName = players[opponentUid].name;
+
+    document.getElementById('arenaMyName').innerText = myName;
+    document.getElementById('arenaOpName').innerText = opponentName;
+
+    // 3. 啟動擂台專屬的 Firebase 即時雷達 (看雙方血條飆升)
+    onSnapshot(currentArenaRef, (snap) => {
+        if (!snap.exists()) return;
+        const liveData = snap.data();
+        
+        // 抓取雲端最新分數
+        const myLiveScore = liveData.players[currentUid].score || 0;
+        const opLiveScore = liveData.players[opponentUid].score || 0;
+        
+        // 更新 UI 數字與血條長度 (設定血條滿分為 900 點)
+        document.getElementById('arenaMyScore').innerText = myLiveScore;
+        document.getElementById('arenaMyBar').style.width = Math.min((myLiveScore / 900) * 100, 100) + "%";
+        
+        document.getElementById('arenaOpScore').innerText = opLiveScore;
+        document.getElementById('arenaOpBar').style.width = Math.min((opLiveScore / 900) * 100, 100) + "%";
+    });
+
+    // 4. 重置變數，開打！
+    currentQuestionIndex = 0;
+    myArenaTotalScore = 0;
+    loadArenaQuestion();
+};
+
+// 載入題目
+function loadArenaQuestion() {
+    if (currentQuestionIndex >= BATTLE_QUESTIONS.length) {
+        return endBattle(); // 題目出完了，結算
+    }
+
+    isAnswered = false;
+    const currentQ = BATTLE_QUESTIONS[currentQuestionIndex];
+    document.getElementById('arenaQuestion').innerText = currentQ.q;
+    
+    // 渲染選項按鈕
+    const optionsContainer = document.getElementById('arenaOptions');
+    optionsContainer.innerHTML = '';
+    
+    currentQ.options.forEach((optText, index) => {
+        const btn = document.createElement('button');
+        btn.innerText = optText;
+        btn.style.cssText = "padding: 18px; font-size: 1.1rem; font-weight: bold; color: white; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; cursor: pointer; transition: 0.2s;";
+        
+        // 點擊特效
+        btn.onmouseover = () => btn.style.background = "rgba(255,255,255,0.3)";
+        btn.onmouseout = () => btn.style.background = "rgba(255,255,255,0.15)";
+        
+        btn.onclick = () => submitArenaAnswer(index, currentQ.ans, btn);
+        optionsContainer.appendChild(btn);
+    });
+
+    // 啟動 10 秒倒數計時
+    let timeLeft = 10;
+    document.getElementById('arenaTimer').innerText = timeLeft;
+    document.getElementById('arenaTimer').style.color = "#f1c40f"; // 恢復黃色
+    
+    clearInterval(arenaTimerInterval);
+    arenaTimerInterval = setInterval(() => {
+        if (!isAnswered) {
+            timeLeft--;
+            document.getElementById('arenaTimer').innerText = timeLeft;
+            
+            if (timeLeft <= 3) document.getElementById('arenaTimer').style.color = "#ff7675"; // 最後三秒變紅
+            
+            if (timeLeft <= 0) {
+                clearInterval(arenaTimerInterval);
+                submitArenaAnswer(-1, currentQ.ans, null); // 時間到，算錯
+            }
+        }
+    }, 1000);
+}
+
+// 送出答案與時間計分公式
+async function submitArenaAnswer(selectedIndex, correctIndex, btnElement) {
+    if (isAnswered) return;
+    isAnswered = true;
+    clearInterval(arenaTimerInterval);
+
+    const timeLeft = parseInt(document.getElementById('arenaTimer').innerText);
+    let pointsEarned = 0;
+
+    // 🎯 知識王核心計分公式：越快分數越高
+    if (selectedIndex === correctIndex) {
+        if (btnElement) {
+            btnElement.style.background = "#00b894"; // 答對變綠
+            btnElement.style.borderColor = "#00ce8d";
+        }
+        if (timeLeft >= 8) pointsEarned = 300;
+        else if (timeLeft >= 4) pointsEarned = 200;
+        else pointsEarned = 100;
+    } else {
+        if (btnElement) {
+            btnElement.style.background = "#e74c3c"; // 答錯變紅
+            btnElement.style.borderColor = "#ff7675";
+        }
+        // 若有選錯，顯示正確答案是哪一個
+        const allBtns = document.getElementById('arenaOptions').children;
+        if(allBtns[correctIndex]) allBtns[correctIndex].style.background = "#00b894";
+        
+        pointsEarned = -50; // 答錯扣 50 增加刺激感
+    }
+
+    // 累加本地分數並上傳 Firebase 同步給對手看
+    myArenaTotalScore = Math.max(0, myArenaTotalScore + pointsEarned);
+    
+    try {
+        await updateDoc(currentArenaRef, {
+            [`players.${currentUid}.score`]: myArenaTotalScore
+        });
+    } catch (err) {
+        console.error("分數同步失敗:", err);
+    }
+
+    // 停頓 2.5 秒讓玩家看清楚雙方血條變化，再進入下一題
+    setTimeout(() => {
+        currentQuestionIndex++;
+        loadArenaQuestion();
+    }, 2500);
+}
+
+// 結束擂台並發放點數
+async function endBattle() {
+    document.getElementById('battleArenaOverlay').style.display = 'none';
+    
+    // 結算：將擂台賺到的分數，正式加入學生的帳號餘額中
+    const newTotalScore = (userData.score || 0) + myArenaTotalScore;
+    
+    try {
+        await updateDoc(userRef, { 
+            score: newTotalScore,
+            history: [...(userData.history || []), { 
+                date: new Date().toLocaleDateString(), 
+                amount: myArenaTotalScore, 
+                reason: `[知識王] 擂台對戰獎勵` 
+            }]
+        });
+        
+        Swal.fire({
+            title: '🏆 對戰結束！',
+            html: `妳在擂台中獲得了 <b style="color:#e17055; font-size:1.5rem;">${myArenaTotalScore}</b> 點！<br>已發放至妳的錢包。`,
+            icon: 'success'
+        });
+    } catch (err) {
+        Swal.fire('結算異常', '分數發放失敗，請通知 Winnie 老師。', 'error');
+    }
 }
