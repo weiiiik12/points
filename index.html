@@ -102,11 +102,14 @@
         </div>
 
         <div class="school-card-box" style="border-left: 5px solid #00b894;">
-            <h3 class="school-title" style="color:#00b894;">👥 好友組隊闖關</h3>
-            <p class="school-desc">2~8人綁定挑戰，通關全員同時獲得獎勵報酬！</p>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="teamRoomInput" class="school-input" placeholder="請輸入同學的 Room ID">
-                <button class="btn-school-action" style="width:100px; background:#00b894;" onclick="joinTeamChallenge()">綁定隊伍</button>
+            <h3 class="school-title" style="color:#00b894;">👥 知識王對戰 (好友連線)</h3>
+            <p class="school-desc">建立專屬對戰室，或輸入同學的 6 位數房號加入擂台！</p>
+            
+            <button class="btn-school-action" style="background: linear-gradient(135deg, #0984e3, #74b9ff); margin-bottom: 15px;" onclick="createTeamRoom()">➕ 建立專屬對戰房間</button>
+            
+            <div style="display:flex; gap:10px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
+                <input type="text" id="teamRoomInput" class="school-input" placeholder="輸入 6 位數房號加入" style="text-align: center; font-size: 1.1rem; font-weight: bold; letter-spacing: 2px;">
+                <button class="btn-school-action" style="width:100px; background:#00b894;" onclick="joinTeamChallenge()">加入</button>
             </div>
         </div>
 
