@@ -229,38 +229,50 @@ function updateStudentUI() {
     // 🎒 蝦皮優惠券風格背包外殼
     const backpackGrid = document.getElementById('inventoryContainer');
     if (backpackGrid) {
+        // 動態把標題改成「我的背包」並套用蝦皮橘色
+        const titleEl = backpackGrid.previousElementSibling.previousElementSibling;
+        if (titleEl && titleEl.tagName === 'H3') {
+            titleEl.innerHTML = '🎒 我的背包';
+            titleEl.style.color = '#ee4d2d';
+        }
+        
         const myItems = userData.inventory || []; 
 
         if (myItems.length === 0) {
             backpackGrid.innerHTML = `<p style="color:#999; text-align:center; font-size:0.9rem; padding:15px;">🎒 背包空空如也，快去上面買東西吧！</p>`;
         } else {
-            let backpackHtml = `<div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px; width: 100%; box-sizing: border-box;">`;
+            let backpackHtml = `<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px; width: 100%; box-sizing: border-box;">`;
             
-            // 智慧型巡邏學生的背包商品，並繪製精美橫式票券
             myItems.forEach((item, index) => {
-                const isClaimed = item.status === "已領取"; // 判斷是否已經找老師兌換過
+                const isClaimed = item.status === "已領取";
+                const themeColor = isClaimed ? '#c0c0c0' : '#ee4d2d'; // 蝦皮橘色或核銷後的灰色
                 
                 backpackHtml += `
-                        <div style="background: ${isClaimed ? '#b2bec3' : 'linear-gradient(135deg, #ff7675, #ff9f43)'}; width: 85px; min-height: 95px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; position: relative; flex-shrink: 0;">
-                            <span style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">🎁</span>
-                            <small style="font-size: 0.65rem; font-weight: bold; margin-top: 4px; letter-spacing: 1px;">官方正品</small>
-                            <div style="position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; background-image: radial-gradient(circle, #f8f9fa 3px, transparent 4px); background-size: 12px 12px;"></div>
+                    <div style="display: flex; background: white; border: 1px solid #e8e8e8; border-radius: 4px; overflow: hidden; box-shadow: 2px 2px 6px rgba(0,0,0,0.05); width: 100%; min-height: 100px; align-items: stretch; position: relative;">
+                        
+                        <!-- 🎟️ 左側：亮橘色票券頭 -->
+                        <div style="background: ${themeColor}; width: 110px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; position: relative; flex-shrink: 0; border-right: 1px dashed rgba(255,255,255,0.4);">
+                            <span style="font-size: 2.2rem; margin-bottom: 2px;">🛍️</span>
+                            <small style="font-size: 0.75rem; font-weight: bold; letter-spacing: 1px;">官方正品</small>
+                            <!-- 左側邊緣打洞鋸齒裝飾 -->
+                            <div style="position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; background-image: radial-gradient(circle, #ffffff 4px, transparent 4px); background-size: 10px 14px; background-position: -5px 0;"></div>
                         </div>
 
-                        <div style="flex: 1; padding: 10px 15px; text-align: left; display: flex; flex-direction: column; justify-content: center; min-width: 0;">
-                            <h4 style="margin: 0 0 4px 0; font-size: 1.05rem; color: #2d3436; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</h4>
-                            <p style="margin: 0 0 2px 0; font-size: 0.75rem; color: #718096; font-weight: 500;">📅 兌換時間：${item.date || '未知'}</p>
-                            <p style="margin: 0; font-size: 0.75rem; color: #ff7675; font-weight: bold;">💎 價值：認證專屬獎勵</p>
+                        <!-- 📝 中間：詳細資訊欄位 -->
+                        <div style="flex: 1; padding: 12px 15px; text-align: left; display: flex; flex-direction: column; justify-content: center; min-width: 0; border-right: 1px dashed #e8e8e8;">
+                            <h4 style="margin: 0 0 6px 0; font-size: 1.15rem; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</h4>
+                            <p style="margin: 0 0 4px 0; font-size: 0.85rem; color: #757575; font-weight: 500;">低消 $0 (價值：專屬獎勵)</p>
+                            <p style="margin: 0; font-size: 0.8rem; color: #757575;">使用時間 ${item.date || '未知'}</p>
                         </div>
 
-                        <div style="padding-right: 15px; flex-shrink: 0;">
+                        <!-- ⚡ 右側：操作按鈕區 -->
+                        <div style="padding: 0 15px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 85px;">
                             ${isClaimed ? `
-                                <button style="background: #b2bec3; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: not-allowed; box-shadow: none;">已核銷</button>
+                                <button style="background: white; color: #ccc; border: 1px solid #ccc; padding: 6px 0; border-radius: 2px; font-size: 0.85rem; font-weight: bold; cursor: not-allowed; width: 100%;">已核銷</button>
                             ` : `
-                                <button onclick="claimBackpackItem(${index}, '${item.title.replace(/'/g, "\\'")}')" style="background: #ff7675; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(255,118,117,0.25);">未領取</button>
+                                <button onclick="claimBackpackItem(${index}, '${item.title.replace(/'/g, "\\'")}')" style="background: ${themeColor}; color: white; border: none; padding: 6px 0; border-radius: 2px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(238,77,45,0.2); width: 100%;">未領取</button>
                             `}
                         </div>
-
                     </div>
                 `;
             });
@@ -269,7 +281,6 @@ function updateStudentUI() {
             backpackGrid.innerHTML = backpackHtml;
         }
     }
-}
 
 // 補助防呆：確保分數標籤能穩定顯示
 function bookkeepingScore(score) {
