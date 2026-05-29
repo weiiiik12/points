@@ -387,10 +387,9 @@ function renderLevelGrid() {
     
     const currentGradeCode = (userData && userData.grade) ? userData.grade.toLowerCase() : 'g1';
     
-    // 1. 篩選出符合目前「科目」與「年級」的所有雲端題庫
+    // 1. 篩選出符合目前「科目」的所有雲端題庫 (不分年級)
     const subjectQuizzes = allCloudQuestions.filter(item => 
-        item.subject === currentSelectedSubject && 
-        item.grade === currentGradeCode
+        item.subject === currentSelectedSubject
     );
 
     // 2. 如果這個科目完全沒有建置題庫，顯示留白提示
@@ -443,7 +442,8 @@ window.createTeamRoom = async function() {
     if (!checkGuestPermission() || !userData) return;
     
     // 找出目前科目跟年級的所有題目
-    const subjectQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject && q.grade === (userData.grade || 'g1'));
+    // 找出目前科目的所有題目 (不分年級)
+    const subjectQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject);
     if (subjectQs.length < 3) {
         return Swal.fire('題庫不足', '這個科目的雲端題庫還不到3題，無法開啟擂台喔！', 'warning');
     }
