@@ -457,32 +457,73 @@ async function openAdminPanel() {
 }
 
 // ==========================================
-// ⚔️ 知識王對戰系統核心邏輯
+// ⚔️ 知識王對戰系統核心邏輯 (含 AI 模式與戰報)
 // ==========================================
 function generateRoomCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
 
-// 👑 房主建立房間 (智慧抽出該科目 3 題)
-window.createTeamRoom = async function() {
+// 變數宣告區
+let unsubscribeRoom = null; 
+let currentArenaRef = null;
+let currentBattleQuestions = []; 
+let arenaTimerInterval = null;
+let currentQuestionIndex = 0;
+let isAnswered = false;
+let myArenaTotalScore = 0; 
+
+// 🔥 新增：戰鬥數據統計
+let isAIMode = false;
+let aiTimer = null;
+let aiTotalScore = 0;
+let myCorrectCount = 0;
+let myTotalTimeSpent = 0;
+
+// 🤖 啟動 AI 隨機對戰模式
+window.startAIBattle = async function() {
     if (!checkGuestPermission() || !userData) return;
     
-    // 找出目前科目跟年級的所有題目
-    // 找出目前科目的所有題目 (不分年級)
     const subjectQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject);
-    if (subjectQs.length < 3) {
-        return Swal.fire('題庫不足', '這個科目的雲端題庫還不到3題，無法開啟擂台喔！', 'warning');
-    }
+    if (subjectQs.length < 3) return Swal.fire('題庫不足', '這個科目的雲端題庫還不到3題，無法開啟擂台喔！', 'warning');
 
-    // 隨機打亂並抽出3題
+    // 隨機抽 3 題，並切換到 AI 模式
+    const shuffledQuestions = subjectQs.sort(() => 0.5 - Math.random()).slice(0, 3);
+    isAIMode = true;
+    currentArenaRef = null; // AI 模式不需要連線 Firebase
+    
+    // 建立虛擬房間資料
+    const mockRoomData = {
+        questions: shuffledQuestions,
+        players: {
+            [currentUid]: { name: userData.realName, score: 0 },
+            "ai_bot": { name: "🤖 AI 知識大師", score: 0 }
+        }
+    };
+    
+    Swal.fire({
+        title: '🤖 尋找 AI 對手中...',
+        html: 'AI 大師已準備就緒！',
+        timer: 1500,
+        showConfirmButton: false,
+        didOpen: () => { Swal.showLoading(); }
+    }).then(() => {
+        startBattleArena("AI_MODE", mockRoomData);
+    });
+};
+
+// 👑 房主建立房間 (好友模式)
+window.createTeamRoom = async function() {
+    if (!checkGuestPermission() || !userData) return;
+    const subjectQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject);
+    if (subjectQs.length < 3) return Swal.fire('題庫不足', '這個科目的雲端題庫還不到3題，無法開啟擂台喔！', 'warning');
+
     const shuffledQuestions = subjectQs.sort(() => 0.5 - Math.random()).slice(0, 3);
     const roomCode = generateRoomCode();
     const roomRef = doc(db, "team_challenges", roomCode);
+    isAIMode = false;
 
     try {
         await setDoc(roomRef, {
-            status: "waiting", 
-            hostUid: currentUid,
-            createdAt: Date.now(),
-            questions: shuffledQuestions, // 將抽好的 3 題存入房間
+            status: "waiting", hostUid: currentUid, createdAt: Date.now(),
+            questions: shuffledQuestions,
             players: { [currentUid]: { name: userData.realName, isReady: false, score: 0 } }
         });
         enterWaitingRoom(roomCode, true);
@@ -493,24 +534,18 @@ window.joinTeamChallenge = async function() {
     if (!checkGuestPermission() || !userData) return;
     const inputEl = document.getElementById('teamRoomInput');
     const roomCode = inputEl ? inputEl.value.trim() : '';
-    if (!roomCode || roomCode.length !== 6) return Swal.fire('格式錯誤', '請輸入同學提供的 6 位數房號！', 'warning');
+    if (!roomCode || roomCode.length !== 6) return Swal.fire('格式錯誤', '請輸入 6 位數房號！', 'warning');
 
     const roomRef = doc(db, "team_challenges", roomCode);
     const roomSnap = await getDoc(roomRef);
-
-    if (!roomSnap.exists()) return Swal.fire('找不到房間', '這間教室不存在，請確認房號是否正確！', 'error');
-    const roomData = roomSnap.data();
-    if (roomData.status !== "waiting") return Swal.fire('來晚了', '這個房間已經開始對戰或結束囉！', 'warning');
-    if (Object.keys(roomData.players).length >= 2) return Swal.fire('房間已滿', '這個房間已經有兩個人囉，去別間看看吧！', 'warning');
-
+    if (!roomSnap.exists()) return Swal.fire('找不到房間', '這間教室不存在！', 'error');
+    
+    isAIMode = false;
     try {
         await updateDoc(roomRef, { [`players.${currentUid}`]: { name: userData.realName, isReady: false, score: 0 } });
         enterWaitingRoom(roomCode, false);
     } catch (err) { Swal.fire('加入失敗', err.message, 'error'); }
 };
-
-let unsubscribeRoom = null; 
-let currentArenaRef = null;
 
 function enterWaitingRoom(roomCode, isHost) {
     const roomRef = doc(db, "team_challenges", roomCode);
@@ -522,11 +557,11 @@ function enterWaitingRoom(roomCode, isHost) {
         showCancelButton: true, showConfirmButton: true, confirmButtonText: '✋ 我準備好了！', cancelButtonText: '離開房間', confirmButtonColor: '#00b894', cancelButtonColor: '#b2bec3', allowOutsideClick: false,
         didOpen: () => {
             unsubscribeRoom = onSnapshot(roomRef, (snap) => {
-                if (!snap.exists()) { Swal.close(); return Swal.fire('房間已解散', '房主已關閉這個對戰室。', 'info'); }
+                if (!snap.exists()) { Swal.close(); return Swal.fire('房間解散', '房主已關閉對戰室。', 'info'); }
                 const data = snap.data();
                 const players = data.players || {};
                 const playerKeys = Object.keys(players);
-                let html = `<p style="color:#666; font-size:0.9rem; margin-bottom:15px;">目前對戰人數：${playerKeys.length} / 2</p>`;
+                let html = `<p style="color:#666;">目前對戰人數：${playerKeys.length} / 2</p>`;
                 let allReady = true;
 
                 playerKeys.forEach(uid => {
@@ -544,21 +579,15 @@ function enterWaitingRoom(roomCode, isHost) {
     }).then(async (result) => {
         if (result.isConfirmed) {
             await updateDoc(roomRef, { [`players.${currentUid}.isReady`]: true });
-            Swal.fire({ title: `⚔️ 等待對手準備中...`, html: `<div style="padding: 20px;">大家都在等妳喔！</div>`, showConfirmButton: false, showCancelButton: true, cancelButtonText: '取消準備', cancelButtonColor: '#e74c3c', allowOutsideClick: false
+            Swal.fire({ title: `⚔️ 等待對手準備中...`, showConfirmButton: false, showCancelButton: true, cancelButtonText: '取消準備', allowOutsideClick: false
             }).then(async (res) => {
                 if (res.dismiss === Swal.DismissReason.cancel) { await updateDoc(roomRef, { [`players.${currentUid}.isReady`]: false }); if (unsubscribeRoom) unsubscribeRoom(); }
             });
-        } else if (result.dismiss === Swal.DismissReason.cancel) { if (unsubscribeRoom) unsubscribeRoom(); }
+        } else { if (unsubscribeRoom) unsubscribeRoom(); }
     });
 }
 
-// ⚔️ 擂台戰鬥區
-let currentBattleQuestions = []; 
-let arenaTimerInterval = null;
-let currentQuestionIndex = 0;
-let isAnswered = false;
-let myArenaTotalScore = 0; 
-
+// ⚔️ 擂台戰鬥區 (升級版)
 function startBattleArena(roomCode, roomData) {
     const overlay = document.getElementById('battleArenaOverlay');
     if(overlay) overlay.style.display = 'flex';
@@ -570,21 +599,23 @@ function startBattleArena(roomCode, roomData) {
 
     document.getElementById('arenaMyName').innerText = players[currentUid].name;
     document.getElementById('arenaOpName').innerText = players[opponentUid].name;
-
-    onSnapshot(currentArenaRef, (snap) => {
-        if (!snap.exists()) return;
-        const liveData = snap.data();
-        const myLiveScore = liveData.players[currentUid].score || 0;
-        const opLiveScore = liveData.players[opponentUid].score || 0;
-        
-        document.getElementById('arenaMyScore').innerText = myLiveScore;
-        document.getElementById('arenaMyBar').style.width = Math.min((myLiveScore / 900) * 100, 100) + "%";
-        document.getElementById('arenaOpScore').innerText = opLiveScore;
-        document.getElementById('arenaOpBar').style.width = Math.min((opLiveScore / 900) * 100, 100) + "%";
-    });
-
+    
+    // 初始化分數與統計
+    myArenaTotalScore = 0; aiTotalScore = 0;
+    myCorrectCount = 0; myTotalTimeSpent = 0;
     currentQuestionIndex = 0;
-    myArenaTotalScore = 0;
+
+    // 如果是好友連線模式，啟動即時監聽對手分數
+    if (!isAIMode && currentArenaRef) {
+        onSnapshot(currentArenaRef, (snap) => {
+            if (!snap.exists()) return;
+            const liveData = snap.data();
+            const opLiveScore = liveData.players[opponentUid].score || 0;
+            document.getElementById('arenaOpScore').innerText = opLiveScore;
+            document.getElementById('arenaOpBar').style.width = Math.min((opLiveScore / 900) * 100, 100) + "%";
+        });
+    }
+
     loadArenaQuestion();
 }
 
@@ -611,6 +642,26 @@ function loadArenaQuestion() {
     document.getElementById('arenaTimer').innerText = timeLeft;
     document.getElementById('arenaTimer').style.color = "#f1c40f"; 
     
+    // 🤖 AI 思考邏輯 (只在 AI 模式觸發)
+    if (isAIMode) {
+        const aiDelay = Math.floor(Math.random() * 6000) + 1500; // AI 思考時間 1.5秒~7.5秒
+        clearTimeout(aiTimer);
+        aiTimer = setTimeout(() => {
+            if (isAnswered) return; // 如果玩家已經秒答並進入下一題，AI就放棄這題
+            const isCorrect = Math.random() < 0.7; // AI 有 70% 機率答對
+            const aiTimeLeft = 10 - (aiDelay / 1000);
+            
+            let points = 0;
+            if (isCorrect) {
+                if (aiTimeLeft >= 8) points = 300; else if (aiTimeLeft >= 4) points = 200; else points = 100;
+            } else points = -50;
+            
+            aiTotalScore = Math.max(0, aiTotalScore + points);
+            document.getElementById('arenaOpScore').innerText = aiTotalScore;
+            document.getElementById('arenaOpBar').style.width = Math.min((aiTotalScore / 900) * 100, 100) + "%";
+        }, aiDelay);
+    }
+    
     clearInterval(arenaTimerInterval);
     arenaTimerInterval = setInterval(() => {
         if (!isAnswered) {
@@ -626,11 +677,14 @@ async function submitArenaAnswer(selectedIndex, correctIndex, btnElement) {
     if (isAnswered) return;
     isAnswered = true;
     clearInterval(arenaTimerInterval);
+    clearTimeout(aiTimer); // 玩家答題後，停止 AI 動作
 
     const timeLeft = parseInt(document.getElementById('arenaTimer').innerText);
-    let pointsEarned = 0;
+    myTotalTimeSpent += (10 - Math.max(0, timeLeft)); // 紀錄花費秒數
 
+    let pointsEarned = 0;
     if (selectedIndex === correctIndex) {
+        myCorrectCount++; // 紀錄答對題數
         if (btnElement) { btnElement.style.background = "#00b894"; btnElement.style.borderColor = "#00ce8d"; }
         if (timeLeft >= 8) pointsEarned = 300; else if (timeLeft >= 4) pointsEarned = 200; else pointsEarned = 100;
     } else {
@@ -641,7 +695,12 @@ async function submitArenaAnswer(selectedIndex, correctIndex, btnElement) {
     }
 
     myArenaTotalScore = Math.max(0, myArenaTotalScore + pointsEarned);
-    try { await updateDoc(currentArenaRef, { [`players.${currentUid}.score`]: myArenaTotalScore }); } catch (err) {}
+    document.getElementById('arenaMyScore').innerText = myArenaTotalScore;
+    document.getElementById('arenaMyBar').style.width = Math.min((myArenaTotalScore / 900) * 100, 100) + "%";
+
+    if (!isAIMode && currentArenaRef) {
+        try { await updateDoc(currentArenaRef, { [`players.${currentUid}.score`]: myArenaTotalScore }); } catch (err) {}
+    }
 
     setTimeout(() => { currentQuestionIndex++; loadArenaQuestion(); }, 2500);
 }
@@ -650,14 +709,38 @@ async function endBattle() {
     const overlay = document.getElementById('battleArenaOverlay');
     if(overlay) overlay.style.display = 'none';
     
-    const newTotalScore = (userData.score || 0) + myArenaTotalScore;
+    // 計算精準數據
+    const totalQ = currentBattleQuestions.length;
+    const accuracy = Math.round((myCorrectCount / totalQ) * 100);
+    const avgTime = (myTotalTimeSpent / totalQ).toFixed(1);
+    
+    // 判斷輸贏
+    const opScore = isAIMode ? aiTotalScore : parseInt(document.getElementById('arenaOpScore').innerText);
+    let winMessage = myArenaTotalScore > opScore ? "🏆 挑戰勝利！" : (myArenaTotalScore === opScore ? "🤝 平手！" : "💔 挑戰失敗");
+    let pointReward = myArenaTotalScore > opScore ? myArenaTotalScore : Math.floor(myArenaTotalScore / 2); // 贏了拿全額，輸了拿一半安慰獎
+    
+    const newTotalScore = (userData.score || 0) + pointReward;
+    
     try {
         await updateDoc(userRef, { 
             score: newTotalScore,
-            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), amount: myArenaTotalScore, reason: `[知識王] 擂台對戰獎勵` }]
+            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), amount: pointReward, reason: `[對戰] 擂台結算` }]
         });
-        Swal.fire({ title: '🏆 對戰結束！', html: `妳在擂台中獲得了 <b style="color:#e17055; font-size:1.5rem;">${myArenaTotalScore}</b> 點！<br>已發放至妳的錢包。`, icon: 'success' });
-    } catch (err) { Swal.fire('結算異常', '分數發放失敗，請通知 Winnie 老師。', 'error'); }
+        
+        Swal.fire({
+            title: winMessage,
+            html: `
+                <div style="text-align:left; background:#f8f9fa; padding:15px; border-radius:10px; margin:10px 0;">
+                    <p style="margin:5px 0;">🎯 <b>正確率：</b> <span style="color:${accuracy >= 60 ? '#00b894' : '#e74c3c'}">${accuracy}%</span> (${myCorrectCount}/${totalQ})</p>
+                    <p style="margin:5px 0;">⏱️ <b>平均作答速度：</b> ${avgTime} 秒/題</p>
+                    <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                    <p style="margin:5px 0;">🆚 <b>雙方分數：</b> ${myArenaTotalScore} : ${opScore}</p>
+                </div>
+                獲得對戰點數：<b style="color:#e17055; font-size:1.5rem;">${pointReward}</b> 點！
+            `,
+            icon: myArenaTotalScore > opScore ? 'success' : 'info'
+        });
+    } catch (err) { Swal.fire('結算異常', '分數發放失敗', 'error'); }
 }
 // ==========================================
 // 🎯 單人測驗闖關系統 (支援秒數計分與週末翻倍)
