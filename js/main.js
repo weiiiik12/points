@@ -29,7 +29,13 @@ const QUESTION_URLS = {
 };
 
 let allCloudQuestions = []; // 專門用來存放全校全科題目的超級陣列
-
+// ✨ 妳可以把喜歡的圖片網址放進這個陣列裡
+const QUIZ_BACKGROUNDS = [
+    "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1600&auto=format&fit=crop"
+];
+let bgInterval = null;
 // ==========================================
 // 🚀 系統初始化
 // ==========================================
@@ -380,6 +386,7 @@ window.buyShopItem = async function(title, price, stock) {
 };
 
 // ✨ 智慧渲染冒險單元地圖 (資料驅動)
+// ✨ 智慧渲染冒險單元地圖 (資料驅動)
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
@@ -411,10 +418,25 @@ function renderLevelGrid() {
         btn.onmouseover = () => btn.style.transform = "translateY(-3px)";
         btn.onmouseout = () => btn.style.transform = "translateY(0)";
 
-        // 👇 就是這裡！幫妳清除了多餘的重複碼，現在括號完美對齊了！
+        // 👇 這裡就是升級後的難度選擇邏輯！
         btn.onclick = () => { 
             if (!checkGuestPermission()) return; 
-            startSingleQuiz(unitNum); 
+            Swal.fire({
+                title: `第 ${unitNum} 單元挑戰`,
+                html: '請選擇妳的挑戰難度：<br><br><div style="text-align:left; font-size:0.9rem; color:#666; background:#f8f9fa; padding:10px; border-radius:8px;">🟢 <b>簡單：</b>10秒/題，答對得 1 點<br>🟡 <b>中等：</b>7秒/題，答對得 3 點<br>🔴 <b>困難：</b>5秒/題，答對得 5 點</div>',
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: '🟢 簡單',
+                denyButtonText: '🟡 中等',
+                cancelButtonText: '🔴 困難',
+                confirmButtonColor: '#00b894',
+                denyButtonColor: '#f1c40f',
+                cancelButtonColor: '#e74c3c',
+            }).then((result) => {
+                if (result.isConfirmed) startSingleQuiz(unitNum, 'easy');
+                else if (result.isDenied) startSingleQuiz(unitNum, 'medium');
+                else if (result.dismiss === Swal.DismissReason.cancel) startSingleQuiz(unitNum, 'hard');
+            });
         };
         
         grid.appendChild(btn);
