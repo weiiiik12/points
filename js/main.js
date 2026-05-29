@@ -301,40 +301,54 @@ window.claimBackpackItem = async function(itemIndex, itemTitle) {
     });
 };
 
+// 🗺️ 智慧渲染冒險單元地圖
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
     grid.innerHTML = '';
 
+    // 取得學生年級
     const currentGradeCode = (userData && userData.grade) ? userData.grade.toLowerCase() : 'g1';
 
-    for (let i = 1; i <= 12; i++) {
-        const finalQuizzesPool = cloudLevelsData.filter(item => 
-            item.subject === currentSelectedSubject && 
-            item.level === i && 
-            item.grade.toLowerCase() === currentGradeCode
-        );
+    // 1. 篩選出符合目前「科目」與「年級」的所有雲端題庫
+    const subjectQuizzes = cloudLevelsData.filter(item => 
+        item.subject === currentSelectedSubject && 
+        item.grade.toLowerCase() === currentGradeCode
+    );
+
+    // 2. 如果這個科目完全沒有建置題庫，顯示留白提示
+    if (subjectQuizzes.length === 0) {
+        grid.innerHTML = `<p style="color:#999; grid-column: span 3; text-align:center; padding: 20px; font-weight:bold;">這科的單元還在建置中喔！敬請期待 ✨</p>`;
+        return;
+    }
+
+    // 3. 找出有哪些「單元號碼」(level)，去除重複並從小到大排序
+    const uniqueUnits = [...new Set(subjectQuizzes.map(item => item.level))].sort((a, b) => a - b);
+
+    // 4. 只產生「有題目」的單元按鈕
+    uniqueUnits.forEach(unitNum => {
+        // 找出這個單元最新的那一筆題目
+        const unitQuizzes = subjectQuizzes.filter(item => item.level === unitNum);
+        const latestQuiz = unitQuizzes[unitQuizzes.length - 1];
 
         const btn = document.createElement('button');
         btn.className = 'btn-level-placeholder';
+        btn.style.cssText = "padding: 12px 8px; border-radius: 10px; cursor: pointer; font-weight: bold; background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; border: none; box-shadow: 0 4px 8px rgba(108,92,231,0.2); transition: 0.2s;";
+        
+        btn.innerHTML = `🚀 第 ${unitNum} 單元<br><small style="color:#fff; font-size:0.75rem;">${latestQuiz.title}</small>`;
+        
+        btn.onmouseover = () => btn.style.transform = "translateY(-3px)";
+        btn.onmouseout = () => btn.style.transform = "translateY(0)";
 
-        if (finalQuizzesPool.length > 0) {
-            btn.style.cssText = "padding: 12px 8px; border-radius: 10px; cursor: pointer; font-weight: bold; background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; border: none; box-shadow: 0 4px 8px rgba(108,92,231,0.2);";
-            const latestTitle = finalQuizzesPool[finalQuizzesPool.length - 1].title;
-            btn.innerHTML = `🚀 第 ${i} 關<br><small style="color:#fff; font-size:0.75rem;">${latestTitle}</small>`;
-            btn.onclick = () => { 
-                if (!checkGuestPermission()) return; 
-                const randomIdx = Math.floor(Math.random() * finalQuizzesPool.length);
-                window.open(finalQuizzesPool[randomIdx].url, '_blank'); 
-            };
-        } else {
-            btn.innerHTML = `🔒 第 ${i} 關<br><small style="color:#cbd5e1; font-size:0.75rem;">冒險準備中</small>`;
-            btn.onclick = () => {
-                Swal.fire(`第 ${i} 關`, checkWeekendStatus() ? '🔥 週末雙倍副本！本關題庫導師正在建置中～' : '常態冒險模式，關卡內容調整中！', 'info');
-            };
-        }
+        btn.onclick = () => { 
+            if (!checkGuestPermission()) return; 
+            // 隨機抽這個單元裡的一張表單給學生
+            const randomIdx = Math.floor(Math.random() * unitQuizzes.length);
+            window.open(unitQuizzes[randomIdx].url, '_blank'); 
+        };
+        
         grid.appendChild(btn);
-    }
+    });
 }
 
 async function fetchGoogleSheetShop() {
