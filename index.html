@@ -202,11 +202,42 @@
         </div>
     </div>
 
-    <div id="singleQuizOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); z-index: 10000; color: white; flex-direction: column; overflow: hidden; font-family: 'PingFang TC', sans-serif;">
-        <div style="display: flex; justify-content: space-between; padding: 20px; background: rgba(0,0,0,0.2);">
-            <div style="font-size: 1.2rem; font-weight: bold;" id="singleQuizTitle">國語科 - 第 1 單元</div>
-            <div style="font-size: 1.2rem; font-weight: bold; color: #f1c40f;">得分: <span id="singleQuizScore" style="font-size: 1.5rem;">0</span></div>
+    <!-- 🎯 單人測驗闖關擂台 (支援背景輪播與難度計分) -->
+    <div id="singleQuizOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; color: white; flex-direction: column; overflow: hidden; font-family: 'PingFang TC', sans-serif;">
+        
+        <!-- 動態輪播背景層 (加上暗色遮罩讓文字更清楚) -->
+        <div id="quizBackground" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; background-image: url('https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1600&auto=format&fit=crop'); z-index: -2; transition: background-image 1s ease-in-out;"></div>
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: -1;"></div>
+
+        <!-- 頂部資訊區 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div>
+                <div style="font-size: 1.3rem; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.5);" id="singleQuizTitle">國語科 - 第 1 單元</div>
+                <div style="font-size: 0.9rem; color: #a29bfe; font-weight: bold; margin-top: 5px;" id="singleQuizProgressText">進度: 1 / 10</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 1rem; color: #dfe6e9; font-weight: bold;">本次獲得點數</div>
+                <div style="font-size: 2rem; font-weight: 900; color: #f1c40f; text-shadow: 0 2px 4px rgba(0,0,0,0.5);" id="singleQuizScore">0</div>
+            </div>
         </div>
+        
+        <!-- 答題進度條 -->
+        <div style="background: rgba(255,255,255,0.1); height: 8px;">
+            <div id="singleQuizProgress" style="background: linear-gradient(90deg, #00b894, #00ce8d); height: 100%; width: 0%; transition: width 0.3s; box-shadow: 0 0 10px rgba(0,206,141,0.5);"></div>
+        </div>
+        
+        <!-- 倒數計時與題目區 -->
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center;">
+            <div id="singleQuizTimer" style="font-size: 5.5rem; font-weight: 900; color: #f1c40f; text-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 20px;">10</div>
+            
+            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.2); width: 100%; max-width: 600px; margin-bottom: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <h2 id="singleQuizQuestion" style="font-size: 1.6rem; line-height: 1.5; margin: 0; min-height: 80px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">讀取題目中...</h2>
+            </div>
+            
+            <!-- 選項按鈕區 -->
+            <div id="singleQuizOptions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 600px;"></div>
+        </div>
+    </div>
         <div style="background: rgba(255,255,255,0.2); height: 8px;">
             <div id="singleQuizProgress" style="background: #00ce8d; height: 100%; width: 0%; transition: width 0.3s;"></div>
         </div>
