@@ -214,6 +214,7 @@ async function enterSystem(userCleanId, realName) {
 }
 
 // 🔄 更新學生頂部資訊欄與「榮譽背包小櫥窗」
+// 🔄 更新學生頂部資訊欄與「榮譽背包小櫥窗」
 function updateStudentUI() {
     if (!userData) return;
     const nameDisplay = document.getElementById('childNameDisplay');
@@ -235,7 +236,7 @@ function updateStudentUI() {
             titleEl.innerHTML = '🎒 我的背包';
             titleEl.style.color = '#ee4d2d';
         }
-        
+
         const myItems = userData.inventory || []; 
 
         if (myItems.length === 0) {
@@ -281,6 +282,7 @@ function updateStudentUI() {
             backpackGrid.innerHTML = backpackHtml;
         }
     }
+}
 
 // 補助防呆：確保分數標籤能穩定顯示
 function bookkeepingScore(score) {
