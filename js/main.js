@@ -411,12 +411,12 @@ function renderLevelGrid() {
         btn.onmouseover = () => btn.style.transform = "translateY(-3px)";
         btn.onmouseout = () => btn.style.transform = "translateY(0)";
 
+        // 👇 就是這裡！幫妳清除了多餘的重複碼，現在括號完美對齊了！
         btn.onclick = () => { 
             if (!checkGuestPermission()) return; 
-            btn.onclick = () => { 
-            if (!checkGuestPermission()) return; 
-            startSingleQuiz(unitNum); // ✨ 啟動我們新寫的單人測驗！
+            startSingleQuiz(unitNum); 
         };
+        
         grid.appendChild(btn);
     });
 }
