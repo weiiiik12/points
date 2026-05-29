@@ -843,3 +843,37 @@ async function endSingleQuiz() {
         Swal.fire('結算異常', '點數發放失敗，請通知 Winnie 老師。', 'error');
     }
 }
+
+// 🏳️ 單人挑戰：中途退出防呆機制
+window.quitSingleQuiz = function() {
+    Swal.fire({
+        title: '⚠️ 確定要放棄挑戰嗎？',
+        html: '現在退出是<b style="color:#e74c3c;">無法獲得任何點數</b>的喔！<br>而且剛剛答錯的題目依然會記錄進錯題本中。',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e74c3c',
+        cancelButtonColor: '#b2bec3',
+        confirmButtonText: '對，我要退出',
+        cancelButtonText: '繼續挑戰！'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            // 1. 徹底清除計時器，防止畫面關閉後還在背景偷偷倒數
+            clearInterval(singleTimerInterval);
+            clearInterval(bgInterval);
+            
+            // 2. 將累積的獎勵全部歸零
+            singleTotalEarned = 0;
+            
+            // 3. 隱藏全螢幕單人挑戰擂台
+            document.getElementById('singleQuizOverlay').style.display = 'none';
+            
+            // 4. 即便中途退出，剛剛產生的錯題大數據也要同步上傳雲端，才能發揮「AI錯題本」的威力
+            try { 
+                await updateDoc(userRef, { questionStats: userData.questionStats }); 
+            } catch(e) { console.error("退出時同步錯題本失敗:", e); }
+            
+            // 5. 噴出溫馨的小提示
+            Swal.fire('已安全退出', '這次的挑戰不計分，整理好心情隨時可以再戰！💪', 'info');
+        }
+    });
+};
