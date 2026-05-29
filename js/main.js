@@ -1,7 +1,7 @@
 // js/main.js
 import { auth, db } from './firebase-init.js';
 import { signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentUser = null;
 let currentUid = null; 
@@ -9,44 +9,39 @@ let userRef = null;
 let userData = null;
 let currentSelectedSubject = 'chi'; 
 let excelUsersDatabase = []; 
-
 let isGuest = false;
 
 // ==========================================
 // 🔗 雲端資料庫網址設定區
 // ==========================================
-// 1. 學生帳密與商店網址 (請保留妳原本的)
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=0&single=true&output=csv";
 const GOOGLE_SHEET_STUDENTS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=485295361&single=true&output=csv";
 
-// 2. ✨ 新增：五大科目的雲端題庫 CSV 網址 (請把妳發布的網址貼在引號內)
 const QUESTION_URLS = {
-    chi: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=347151370&single=true&output=csv", // 
-    eng: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=1583741101&single=true&output=csv", // 
-    math: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=1479866223&single=true&output=csv", // 
-    sci: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=1403571866&single=true&output=csv", // 
-    soc: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=900979351&single=true&output=csv"   //  
+    chi: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=347151370&single=true&output=csv", 
+    eng: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=1583741101&single=true&output=csv", 
+    math: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=1479866223&single=true&output=csv", 
+    sci: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=1403571866&single=true&output=csv", 
+    soc: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTM5Rydk9kMiuBsUX_PNwbh_qJHUjldU9URxh5WvWKqGxxQuGat36mKziutjMSUaTNDXIsxmTr2Llaj/pub?gid=900979351&single=true&output=csv"  
 };
 
-let allCloudQuestions = []; // 專門用來存放全校全科題目的超級陣列
-// ✨ 妳可以把喜歡的圖片網址放進這個陣列裡
+let allCloudQuestions = [];
 const QUIZ_BACKGROUNDS = [
     "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1600&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1600&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1600&auto=format&fit=crop"
 ];
 let bgInterval = null;
+
 // ==========================================
 // 🚀 系統初始化
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     await loadExcelCredentials(); 
     checkAutoLogin();              
-
     initAuthButtons();
     checkWeekendStatus();
     
-    // 啟動資料抓取
     fetchGoogleSheetShop(); 
     fetchGoogleSheetQuestions(); 
 
@@ -54,7 +49,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (adminBtn) adminBtn.addEventListener('click', openAdminPanel);
 });
 
-// 🛡️ 智能 CSV 安全解析核心器
 function parseCSVLineSafely(text) {
     let p = '', r = [];
     let q = false;
@@ -68,7 +62,6 @@ function parseCSVLineSafely(text) {
     return r;
 }
 
-// 🛡️ 遊客權限檢查器
 function checkGuestPermission() {
     if (isGuest) {
         Swal.fire('👻 遊客模式', '您目前使用的是遊客體驗帳號，僅供參觀看畫面，無法執行此操作喔！', 'info');
@@ -80,7 +73,6 @@ function checkGuestPermission() {
 // ==========================================
 // 📂 資料抓取與解析區
 // ==========================================
-// 載入學生帳密
 async function loadExcelCredentials() {
     try {
         const response = await fetch(GOOGLE_SHEET_STUDENTS_URL);
@@ -104,7 +96,6 @@ async function loadExcelCredentials() {
     } catch (err) { console.error("預載帳密失敗:", err); }
 }
 
-// ✨ 載入全科雲端題庫
 async function fetchGoogleSheetQuestions() {
     allCloudQuestions = []; 
     for (const [subjectKey, url] of Object.entries(QUESTION_URLS)) {
@@ -137,11 +128,9 @@ async function fetchGoogleSheetQuestions() {
             }
         } catch (err) { console.error(`讀取 ${subjectKey} 題庫失敗:`, err); }
     }
-    console.log("🔥 全科題庫載入完成，共", allCloudQuestions.length, "題");
     renderLevelGrid(); 
 }
 
-// 載入商店
 async function fetchGoogleSheetShop() {
     const shopGrid = document.getElementById('googleSheetShopGrid');
     if (!shopGrid) return;
@@ -286,7 +275,6 @@ function bookkeepingScore(score) {
     if (scoreDisplay) scoreDisplay.innerText = score;
 }
 
-// ✨ 更新蝦皮風格背包
 function updateStudentUI() {
     if (!userData) return;
     const nameDisplay = document.getElementById('childNameDisplay');
@@ -319,7 +307,6 @@ function updateStudentUI() {
                     <div style="display: flex; background: white; border: 1px solid #e8e8e8; border-radius: 4px; overflow: hidden; box-shadow: 2px 2px 6px rgba(0,0,0,0.05); width: 100%; min-height: 100px; align-items: stretch; position: relative;">
                         <div style="background: ${themeColor}; width: 110px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; position: relative; flex-shrink: 0; border-right: 1px dashed rgba(255,255,255,0.4);">
                             <span style="font-size: 2.5rem;">🛍️</span>
-                            <div style="position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; background-image: radial-gradient(circle, #ffffff 4px, transparent 4px); background-size: 10px 14px; background-position: -5px 0;"></div>
                         </div>
                         <div style="flex: 1; padding: 12px 15px; text-align: left; display: flex; flex-direction: column; justify-content: center; min-width: 0; border-right: 1px dashed #e8e8e8;">
                             <h4 style="margin: 0 0 8px 0; font-size: 1.15rem; color: #333; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</h4>
@@ -341,7 +328,6 @@ function updateStudentUI() {
     }
 }
 
-// 核銷背包物品
 window.claimBackpackItem = async function(itemIndex, itemTitle) {
     if (!checkGuestPermission()) return; 
     Swal.fire({
@@ -364,7 +350,6 @@ window.claimBackpackItem = async function(itemIndex, itemTitle) {
     });
 };
 
-// 🛒 直購商品 (含 10 個上限防呆)
 window.buyShopItem = async function(title, price, stock) {
     if (!checkGuestPermission() || !userData) return;
     const currentInventory = userData.inventory || [];
@@ -385,30 +370,21 @@ window.buyShopItem = async function(title, price, stock) {
     });
 };
 
-// ✨ 智慧渲染冒險單元地圖 (資料驅動)
-// ✨ 智慧渲染冒險單元地圖 (資料驅動)
+// ✨ 智慧渲染冒險單元地圖 (資料驅動 + 難度選擇)
 function renderLevelGrid() {
     const grid = document.getElementById('quizLevelGrid');
     if (!grid) return;
     grid.innerHTML = '';
     
-    const currentGradeCode = (userData && userData.grade) ? userData.grade.toLowerCase() : 'g1';
-    
-    // 1. 篩選出符合目前「科目」的所有雲端題庫 (不分年級)
-    const subjectQuizzes = allCloudQuestions.filter(item => 
-        item.subject === currentSelectedSubject
-    );
+    const subjectQuizzes = allCloudQuestions.filter(item => item.subject === currentSelectedSubject);
 
-    // 2. 如果這個科目完全沒有建置題庫，顯示留白提示
     if (subjectQuizzes.length === 0) {
         grid.innerHTML = `<p style="color:#999; grid-column: span 3; text-align:center; padding: 20px; font-weight:bold;">這科的單元還在建置中喔！敬請期待 ✨</p>`;
         return;
     }
 
-    // 3. 找出有哪些「單元號碼」(unit)，去除重複並從小到大排序
     const uniqueUnits = [...new Set(subjectQuizzes.map(item => item.unit))].sort((a, b) => a - b);
 
-    // 4. 動態產生「有題目」的單元按鈕
     uniqueUnits.forEach(unitNum => {
         const btn = document.createElement('button');
         btn.className = 'btn-level-placeholder';
@@ -418,7 +394,6 @@ function renderLevelGrid() {
         btn.onmouseover = () => btn.style.transform = "translateY(-3px)";
         btn.onmouseout = () => btn.style.transform = "translateY(0)";
 
-        // 👇 這裡就是升級後的難度選擇邏輯！
         btn.onclick = () => { 
             if (!checkGuestPermission()) return; 
             Swal.fire({
@@ -438,12 +413,10 @@ function renderLevelGrid() {
                 else if (result.dismiss === Swal.DismissReason.cancel) startSingleQuiz(unitNum, 'hard');
             });
         };
-        
         grid.appendChild(btn);
     });
 }
 
-// 介面切換小工具
 window.selectSubject = function(subject) { currentSelectedSubject = subject; document.querySelectorAll('#subjectFilterGroup .btn-filter-opt').forEach(btn => btn.classList.remove('active')); if (event && event.currentTarget) event.currentTarget.classList.add('active'); renderLevelGrid(); };
 window.switchTab = function(tabId) { document.querySelectorAll('.section').forEach(content => content.style.display = 'none'); document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active')); const targetTab = document.getElementById(tabId); if (targetTab) targetTab.style.display = 'block'; if (event && event.currentTarget) event.currentTarget.classList.add('active'); };
 function checkWeekendStatus() { const today = new Date(); const isWeekend = (today.getDay() === 0 || today.getDay() === 6); const badge = document.getElementById('weekendBadge'); if (badge) badge.style.display = isWeekend ? 'inline-block' : 'none'; return isWeekend; }
@@ -461,7 +434,6 @@ async function openAdminPanel() {
 // ==========================================
 function generateRoomCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
 
-// 變數宣告區
 let unsubscribeRoom = null; 
 let currentArenaRef = null;
 let currentBattleQuestions = []; 
@@ -477,19 +449,16 @@ let aiTotalScore = 0;
 let myCorrectCount = 0;
 let myTotalTimeSpent = 0;
 
-// 🤖 啟動 AI 隨機對戰模式
 window.startAIBattle = async function() {
     if (!checkGuestPermission() || !userData) return;
     
     const subjectQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject);
     if (subjectQs.length < 3) return Swal.fire('題庫不足', '這個科目的雲端題庫還不到3題，無法開啟擂台喔！', 'warning');
 
-    // 隨機抽 3 題，並切換到 AI 模式
     const shuffledQuestions = subjectQs.sort(() => 0.5 - Math.random()).slice(0, 3);
     isAIMode = true;
-    currentArenaRef = null; // AI 模式不需要連線 Firebase
+    currentArenaRef = null; 
     
-    // 建立虛擬房間資料
     const mockRoomData = {
         questions: shuffledQuestions,
         players: {
@@ -509,7 +478,6 @@ window.startAIBattle = async function() {
     });
 };
 
-// 👑 房主建立房間 (好友模式)
 window.createTeamRoom = async function() {
     if (!checkGuestPermission() || !userData) return;
     const subjectQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject);
@@ -587,7 +555,6 @@ function enterWaitingRoom(roomCode, isHost) {
     });
 }
 
-// ⚔️ 擂台戰鬥區 (升級版)
 function startBattleArena(roomCode, roomData) {
     const overlay = document.getElementById('battleArenaOverlay');
     if(overlay) overlay.style.display = 'flex';
@@ -600,12 +567,10 @@ function startBattleArena(roomCode, roomData) {
     document.getElementById('arenaMyName').innerText = players[currentUid].name;
     document.getElementById('arenaOpName').innerText = players[opponentUid].name;
     
-    // 初始化分數與統計
     myArenaTotalScore = 0; aiTotalScore = 0;
     myCorrectCount = 0; myTotalTimeSpent = 0;
     currentQuestionIndex = 0;
 
-    // 如果是好友連線模式，啟動即時監聽對手分數
     if (!isAIMode && currentArenaRef) {
         onSnapshot(currentArenaRef, (snap) => {
             if (!snap.exists()) return;
@@ -615,7 +580,6 @@ function startBattleArena(roomCode, roomData) {
             document.getElementById('arenaOpBar').style.width = Math.min((opLiveScore / 900) * 100, 100) + "%";
         });
     }
-
     loadArenaQuestion();
 }
 
@@ -642,13 +606,12 @@ function loadArenaQuestion() {
     document.getElementById('arenaTimer').innerText = timeLeft;
     document.getElementById('arenaTimer').style.color = "#f1c40f"; 
     
-    // 🤖 AI 思考邏輯 (只在 AI 模式觸發)
     if (isAIMode) {
-        const aiDelay = Math.floor(Math.random() * 6000) + 1500; // AI 思考時間 1.5秒~7.5秒
+        const aiDelay = Math.floor(Math.random() * 6000) + 1500; 
         clearTimeout(aiTimer);
         aiTimer = setTimeout(() => {
-            if (isAnswered) return; // 如果玩家已經秒答並進入下一題，AI就放棄這題
-            const isCorrect = Math.random() < 0.7; // AI 有 70% 機率答對
+            if (isAnswered) return; 
+            const isCorrect = Math.random() < 0.7; 
             const aiTimeLeft = 10 - (aiDelay / 1000);
             
             let points = 0;
@@ -677,14 +640,14 @@ async function submitArenaAnswer(selectedIndex, correctIndex, btnElement) {
     if (isAnswered) return;
     isAnswered = true;
     clearInterval(arenaTimerInterval);
-    clearTimeout(aiTimer); // 玩家答題後，停止 AI 動作
+    clearTimeout(aiTimer); 
 
     const timeLeft = parseInt(document.getElementById('arenaTimer').innerText);
-    myTotalTimeSpent += (10 - Math.max(0, timeLeft)); // 紀錄花費秒數
+    myTotalTimeSpent += (10 - Math.max(0, timeLeft)); 
 
     let pointsEarned = 0;
     if (selectedIndex === correctIndex) {
-        myCorrectCount++; // 紀錄答對題數
+        myCorrectCount++; 
         if (btnElement) { btnElement.style.background = "#00b894"; btnElement.style.borderColor = "#00ce8d"; }
         if (timeLeft >= 8) pointsEarned = 300; else if (timeLeft >= 4) pointsEarned = 200; else pointsEarned = 100;
     } else {
@@ -709,15 +672,13 @@ async function endBattle() {
     const overlay = document.getElementById('battleArenaOverlay');
     if(overlay) overlay.style.display = 'none';
     
-    // 計算精準數據
     const totalQ = currentBattleQuestions.length;
     const accuracy = Math.round((myCorrectCount / totalQ) * 100);
     const avgTime = (myTotalTimeSpent / totalQ).toFixed(1);
     
-    // 判斷輸贏
     const opScore = isAIMode ? aiTotalScore : parseInt(document.getElementById('arenaOpScore').innerText);
     let winMessage = myArenaTotalScore > opScore ? "🏆 挑戰勝利！" : (myArenaTotalScore === opScore ? "🤝 平手！" : "💔 挑戰失敗");
-    let pointReward = myArenaTotalScore > opScore ? myArenaTotalScore : Math.floor(myArenaTotalScore / 2); // 贏了拿全額，輸了拿一半安慰獎
+    let pointReward = myArenaTotalScore > opScore ? myArenaTotalScore : Math.floor(myArenaTotalScore / 2); 
     
     const newTotalScore = (userData.score || 0) + pointReward;
     
@@ -742,25 +703,15 @@ async function endBattle() {
         });
     } catch (err) { Swal.fire('結算異常', '分數發放失敗', 'error'); }
 }
-// ==========================================
-// 🎯 單人測驗闖關系統 (支援秒數計分與週末翻倍)
-// ==========================================
-let singleQuestions = [];
-let singleCurrentIndex = 0;
-let singleTotalScore = 0;
-let singleTimerInterval = null;
-let singleIsAnswered = false;
 
 // ==========================================
 // 🎯 單人測驗闖關系統 (錯題優先、難度計分、背景輪播)
 // ==========================================
 let singleQuestions = [];
 let singleCurrentIndex = 0;
-let singleTotalEarned = 0; // 改為直接顯示獲得的點數
+let singleTotalEarned = 0; 
 let singleTimerInterval = null;
 let singleIsAnswered = false;
-
-// 難度參數
 let currentDiffTime = 10;
 let currentDiffPoints = 1;
 
@@ -768,40 +719,36 @@ window.startSingleQuiz = function(unitNum, difficulty) {
     const unitQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject && q.unit === unitNum);
     if (unitQs.length === 0) return Swal.fire('暫無題目', '老師還在努力出題中喔！', 'warning');
 
-    // 設定難度參數
     let diffLabel = "簡單";
     if (difficulty === 'easy') { currentDiffTime = 10; currentDiffPoints = 1; diffLabel = "簡單"; }
     else if (difficulty === 'medium') { currentDiffTime = 7; currentDiffPoints = 3; diffLabel = "中等"; }
     else if (difficulty === 'hard') { currentDiffTime = 5; currentDiffPoints = 5; diffLabel = "困難"; }
 
-    // 🔥 錯題優先演算法
-    if (!userData.questionStats) userData.questionStats = {}; // 確保有錯題本紀錄
+    if (!userData.questionStats) userData.questionStats = {}; 
     unitQs.sort((a, b) => {
         const wrongA = (userData.questionStats[a.q] && userData.questionStats[a.q].wrong) || 0;
         const wrongB = (userData.questionStats[b.q] && userData.questionStats[b.q].wrong) || 0;
-        // 加入隨機亂數，讓錯題優先但不會每次順序都一模一樣死板
         return (wrongB + Math.random()) - (wrongA + Math.random());
     });
 
-    // 擷取前 10 題
     singleQuestions = unitQs.slice(0, 10);
     singleCurrentIndex = 0;
     singleTotalEarned = 0;
 
-    // UI 更新
     const subjectNames = { chi: '📝 國語科', eng: '🔤 英文科', math: '🔢 數學科', sci: '🔬 自然科', soc: '🌍 社會科' };
     document.getElementById('singleQuizTitle').innerText = `${subjectNames[currentSelectedSubject]} - 第 ${unitNum} 單元 (${diffLabel})`;
     document.getElementById('singleQuizScore').innerText = '0';
     
-    // 啟動背景輪播
     let bgIndex = 0;
     const bgElement = document.getElementById('quizBackground');
-    bgElement.style.backgroundImage = `url('${QUIZ_BACKGROUNDS[0]}')`;
-    clearInterval(bgInterval);
-    bgInterval = setInterval(() => {
-        bgIndex = (bgIndex + 1) % QUIZ_BACKGROUNDS.length;
-        bgElement.style.backgroundImage = `url('${QUIZ_BACKGROUNDS[bgIndex]}')`;
-    }, 10000); // 每 10 秒換一張圖
+    if (bgElement) {
+        bgElement.style.backgroundImage = `url('${QUIZ_BACKGROUNDS[0]}')`;
+        clearInterval(bgInterval);
+        bgInterval = setInterval(() => {
+            bgIndex = (bgIndex + 1) % QUIZ_BACKGROUNDS.length;
+            bgElement.style.backgroundImage = `url('${QUIZ_BACKGROUNDS[bgIndex]}')`;
+        }, 10000); 
+    }
 
     document.getElementById('singleQuizOverlay').style.display = 'flex';
     loadSingleQuestion();
@@ -813,7 +760,6 @@ function loadSingleQuestion() {
     singleIsAnswered = false;
     const currentQ = singleQuestions[singleCurrentIndex];
     
-    // 更新上方進度 (例如：1 / 10)
     document.getElementById('singleQuizProgressText').innerText = `進度: ${singleCurrentIndex + 1} / ${singleQuestions.length}`;
     const progress = ((singleCurrentIndex + 1) / singleQuestions.length) * 100;
     document.getElementById('singleQuizProgress').style.width = `${progress}%`;
@@ -833,7 +779,6 @@ function loadSingleQuestion() {
         optionsContainer.appendChild(btn);
     });
 
-    // 啟動專屬難度的倒數計時
     let timeLeft = currentDiffTime;
     document.getElementById('singleQuizTimer').innerText = timeLeft;
     document.getElementById('singleQuizTimer').style.color = "#f1c40f"; 
@@ -846,7 +791,7 @@ function loadSingleQuestion() {
             if (timeLeft <= 3) document.getElementById('singleQuizTimer').style.color = "#ff7675"; 
             if (timeLeft <= 0) {
                 clearInterval(singleTimerInterval);
-                submitSingleAnswer(-1, currentQ.ans, null); // 超時算錯
+                submitSingleAnswer(-1, currentQ.ans, null); 
             }
         }
     }, 1000);
@@ -858,7 +803,7 @@ async function submitSingleAnswer(selectedIndex, correctIndex, btnElement) {
     clearInterval(singleTimerInterval);
 
     const currentQ = singleQuestions[singleCurrentIndex];
-    const qText = currentQ.q; // 用題目文字當作錯題本的鑰匙
+    const qText = currentQ.q; 
 
     if (!userData.questionStats) userData.questionStats = {};
     if (!userData.questionStats[qText]) userData.questionStats[qText] = { correct: 0, wrong: 0 };
@@ -868,7 +813,6 @@ async function submitSingleAnswer(selectedIndex, correctIndex, btnElement) {
             btnElement.style.background = "#00b894"; 
             btnElement.style.borderColor = "#00ce8d";
         }
-        // 答對，紀錄並直接給予該難度的點數
         userData.questionStats[qText].correct++;
         let pts = currentDiffPoints;
         if (checkWeekendStatus()) pts *= 2;
@@ -881,8 +825,6 @@ async function submitSingleAnswer(selectedIndex, correctIndex, btnElement) {
         }
         const allBtns = document.getElementById('singleQuizOptions').children;
         if(allBtns[correctIndex]) allBtns[correctIndex].style.background = "#00b894";
-        
-        // 答錯，記錄進錯題本，未來會優先出現
         userData.questionStats[qText].wrong++;
     }
 
@@ -895,11 +837,10 @@ async function submitSingleAnswer(selectedIndex, correctIndex, btnElement) {
 }
 
 async function endSingleQuiz() {
-    clearInterval(bgInterval); // 停止背景輪播
+    clearInterval(bgInterval); 
     document.getElementById('singleQuizOverlay').style.display = 'none';
     
     if (singleTotalEarned <= 0) {
-        // 即便 0 分也要把錯題紀錄更新上雲端
         try { await updateDoc(userRef, { questionStats: userData.questionStats }); } catch(e){}
         return Swal.fire('挑戰結束', '這次沒有拿到點數喔，沒關係，下次一定會更好！💪', 'info');
     }
@@ -909,7 +850,7 @@ async function endSingleQuiz() {
     try {
         await updateDoc(userRef, { 
             score: newTotalScore,
-            questionStats: userData.questionStats, // 同步錯題本大數據！
+            questionStats: userData.questionStats, 
             history: [...(userData.history || []), { 
                 date: new Date().toLocaleDateString(), 
                 amount: singleTotalEarned, 
@@ -919,15 +860,12 @@ async function endSingleQuiz() {
         
         Swal.fire({
             title: '🎉 闖關成功！',
-            html: `太棒了！這次挑戰妳紮紮實實地賺到了 <b style="color:#e17055; font-size:1.5rem;">${singleTotalEarned}</b> 點！<br>點數已自動存入錢包。`,
+            html: `太棒了！這次挑戰獲得了 <b style="color:#e17055; font-size:1.5rem;">${singleTotalEarned}</b> 點！<br>點數已自動存入錢包。`,
             icon: 'success'
         });
-    } catch (err) {
-        Swal.fire('結算異常', '點數發放失敗，請通知 Winnie 老師。', 'error');
-    }
+    } catch (err) { Swal.fire('結算異常', '點數發放失敗', 'error'); }
 }
 
-// 🏳️ 單人挑戰：中途退出防呆機制
 window.quitSingleQuiz = function() {
     Swal.fire({
         title: '⚠️ 確定要放棄挑戰嗎？',
@@ -940,22 +878,11 @@ window.quitSingleQuiz = function() {
         cancelButtonText: '繼續挑戰！'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            // 1. 徹底清除計時器，防止畫面關閉後還在背景偷偷倒數
             clearInterval(singleTimerInterval);
             clearInterval(bgInterval);
-            
-            // 2. 將累積的獎勵全部歸零
             singleTotalEarned = 0;
-            
-            // 3. 隱藏全螢幕單人挑戰擂台
             document.getElementById('singleQuizOverlay').style.display = 'none';
-            
-            // 4. 即便中途退出，剛剛產生的錯題大數據也要同步上傳雲端，才能發揮「AI錯題本」的威力
-            try { 
-                await updateDoc(userRef, { questionStats: userData.questionStats }); 
-            } catch(e) { console.error("退出時同步錯題本失敗:", e); }
-            
-            // 5. 噴出溫馨的小提示
+            try { await updateDoc(userRef, { questionStats: userData.questionStats }); } catch(e) {}
             Swal.fire('已安全退出', '這次的挑戰不計分，整理好心情隨時可以再戰！💪', 'info');
         }
     });
