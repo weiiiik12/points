@@ -102,10 +102,13 @@
         </div>
 
         <div class="school-card-box" style="border-left: 5px solid #00b894;">
-            <h3 class="school-title" style="color:#00b894;">👥 好友組隊闖關 (雙人對戰)</h3>
-            <p class="school-desc">建立專屬對戰室，或輸入同學的 6 位數房號加入擂台！</p>
+            <h3 class="school-title" style="color:#00b894;">⚔️ 知識王擂台 (雙人對戰)</h3>
+            <p class="school-desc">挑戰 AI 機器人，或是與好友開房對決！比較速度與正確率！</p>
             
-            <button class="btn-school-action" style="background: linear-gradient(135deg, #0984e3, #74b9ff); margin-bottom: 15px;" onclick="createTeamRoom()">➕ 建立專屬對戰房間</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <button class="btn-school-action" style="background: linear-gradient(135deg, #636e72, #2d3436);" onclick="startAIBattle()">🤖 挑戰 AI 大師</button>
+                <button class="btn-school-action" style="background: linear-gradient(135deg, #0984e3, #74b9ff);" onclick="createTeamRoom()">➕ 建立好友房間</button>
+            </div>
             
             <div style="display:flex; gap:10px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
                 <input type="text" id="teamRoomInput" class="school-input" placeholder="輸入 6 位數房號加入" style="text-align: center; font-size: 1.1rem; font-weight: bold; letter-spacing: 2px;">
@@ -156,14 +159,14 @@
         </div>
 
         <div class="school-card-box" style="border-left: 5px solid #9b59b6; margin-bottom: 20px;">
-            <h3 class="school-title" style="color:#9b59b6;">🎒 蝦皮特惠風：我的榮譽背包</h3>
-            <p class="school-desc">這裡放著妳直購兌換到的實體票券小禮物。</p>
+            <h3 class="school-title" style="color:#9b59b6;">🎒我的背包</h3>
+            <p class="school-desc">這裡放著妳直購兌換到的禮物券。</p>
             <div id="inventoryContainer"></div>
         </div>
 
         <div class="school-card-box" style="border-left: 5px solid #f1c40f;">
             <h3 class="school-title" style="color:#f1c40f;">🏅 我的榮譽成就里程碑</h3>
-            <p class="school-desc">紀錄妳在補習班達成的所有榮耀事蹟！</p>
+            <p class="school-desc">紀錄達成的所有榮耀事蹟！</p>
             <div id="achievementContainer">
                 <p style="color:#999; text-align:center; font-size:0.85rem; padding:10px;">🏆 各科大師與全勤成就獎牌建置中...</p>
             </div>
