@@ -668,42 +668,73 @@ let singleTotalScore = 0;
 let singleTimerInterval = null;
 let singleIsAnswered = false;
 
-window.startSingleQuiz = function(unitNum) {
-    // 1. 抓出這個科目、這個單元的所有題目
+// ==========================================
+// 🎯 單人測驗闖關系統 (錯題優先、難度計分、背景輪播)
+// ==========================================
+let singleQuestions = [];
+let singleCurrentIndex = 0;
+let singleTotalEarned = 0; // 改為直接顯示獲得的點數
+let singleTimerInterval = null;
+let singleIsAnswered = false;
+
+// 難度參數
+let currentDiffTime = 10;
+let currentDiffPoints = 1;
+
+window.startSingleQuiz = function(unitNum, difficulty) {
     const unitQs = allCloudQuestions.filter(q => q.subject === currentSelectedSubject && q.unit === unitNum);
-    
-    if (unitQs.length === 0) {
-        return Swal.fire('暫無題目', '老師還在努力出題中喔！', 'warning');
-    }
+    if (unitQs.length === 0) return Swal.fire('暫無題目', '老師還在努力出題中喔！', 'warning');
 
-    // 2. 隨機打亂，並抽出 5 題來考 (如果妳想一次考 10 題，就把 slice(0, 5) 改成 10)
-    singleQuestions = unitQs.sort(() => 0.5 - Math.random()).slice(0, 5);
+    // 設定難度參數
+    let diffLabel = "簡單";
+    if (difficulty === 'easy') { currentDiffTime = 10; currentDiffPoints = 1; diffLabel = "簡單"; }
+    else if (difficulty === 'medium') { currentDiffTime = 7; currentDiffPoints = 3; diffLabel = "中等"; }
+    else if (difficulty === 'hard') { currentDiffTime = 5; currentDiffPoints = 5; diffLabel = "困難"; }
+
+    // 🔥 錯題優先演算法
+    if (!userData.questionStats) userData.questionStats = {}; // 確保有錯題本紀錄
+    unitQs.sort((a, b) => {
+        const wrongA = (userData.questionStats[a.q] && userData.questionStats[a.q].wrong) || 0;
+        const wrongB = (userData.questionStats[b.q] && userData.questionStats[b.q].wrong) || 0;
+        // 加入隨機亂數，讓錯題優先但不會每次順序都一模一樣死板
+        return (wrongB + Math.random()) - (wrongA + Math.random());
+    });
+
+    // 擷取前 10 題
+    singleQuestions = unitQs.slice(0, 10);
     singleCurrentIndex = 0;
-    singleTotalScore = 0;
+    singleTotalEarned = 0;
 
-    // 3. 設定 UI 標題並開啟全螢幕擂台
+    // UI 更新
     const subjectNames = { chi: '📝 國語科', eng: '🔤 英文科', math: '🔢 數學科', sci: '🔬 自然科', soc: '🌍 社會科' };
-    document.getElementById('singleQuizTitle').innerText = `${subjectNames[currentSelectedSubject]} - 第 ${unitNum} 單元`;
+    document.getElementById('singleQuizTitle').innerText = `${subjectNames[currentSelectedSubject]} - 第 ${unitNum} 單元 (${diffLabel})`;
     document.getElementById('singleQuizScore').innerText = '0';
-    document.getElementById('singleQuizOverlay').style.display = 'flex';
+    
+    // 啟動背景輪播
+    let bgIndex = 0;
+    const bgElement = document.getElementById('quizBackground');
+    bgElement.style.backgroundImage = `url('${QUIZ_BACKGROUNDS[0]}')`;
+    clearInterval(bgInterval);
+    bgInterval = setInterval(() => {
+        bgIndex = (bgIndex + 1) % QUIZ_BACKGROUNDS.length;
+        bgElement.style.backgroundImage = `url('${QUIZ_BACKGROUNDS[bgIndex]}')`;
+    }, 10000); // 每 10 秒換一張圖
 
+    document.getElementById('singleQuizOverlay').style.display = 'flex';
     loadSingleQuestion();
 };
 
 function loadSingleQuestion() {
-    // 檢查是否考完了
-    if (singleCurrentIndex >= singleQuestions.length) {
-        return endSingleQuiz();
-    }
+    if (singleCurrentIndex >= singleQuestions.length) return endSingleQuiz();
 
     singleIsAnswered = false;
     const currentQ = singleQuestions[singleCurrentIndex];
     
-    // 更新上方的綠色進度條
-    const progress = (singleCurrentIndex / singleQuestions.length) * 100;
+    // 更新上方進度 (例如：1 / 10)
+    document.getElementById('singleQuizProgressText').innerText = `進度: ${singleCurrentIndex + 1} / ${singleQuestions.length}`;
+    const progress = ((singleCurrentIndex + 1) / singleQuestions.length) * 100;
     document.getElementById('singleQuizProgress').style.width = `${progress}%`;
     
-    // 渲染題目與選項
     document.getElementById('singleQuizQuestion').innerText = currentQ.q;
     const optionsContainer = document.getElementById('singleQuizOptions');
     optionsContainer.innerHTML = '';
@@ -711,7 +742,7 @@ function loadSingleQuestion() {
     currentQ.options.forEach((optText, index) => {
         const btn = document.createElement('button');
         btn.innerText = optText;
-        btn.style.cssText = "padding: 18px; font-size: 1.1rem; font-weight: bold; color: white; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; cursor: pointer; transition: 0.2s;";
+        btn.style.cssText = "padding: 18px; font-size: 1.1rem; font-weight: bold; color: white; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.4); border-radius: 12px; cursor: pointer; transition: 0.2s;";
         btn.onmouseover = () => btn.style.background = "rgba(255,255,255,0.3)";
         btn.onmouseout = () => btn.style.background = "rgba(255,255,255,0.15)";
         
@@ -719,8 +750,8 @@ function loadSingleQuestion() {
         optionsContainer.appendChild(btn);
     });
 
-    // 啟動 10 秒計時器
-    let timeLeft = 10;
+    // 啟動專屬難度的倒數計時
+    let timeLeft = currentDiffTime;
     document.getElementById('singleQuizTimer').innerText = timeLeft;
     document.getElementById('singleQuizTimer').style.color = "#f1c40f"; 
     
@@ -729,10 +760,10 @@ function loadSingleQuestion() {
         if (!singleIsAnswered) {
             timeLeft--;
             document.getElementById('singleQuizTimer').innerText = timeLeft;
-            if (timeLeft <= 3) document.getElementById('singleQuizTimer').style.color = "#ff7675"; // 倒數 3 秒變紅警告
+            if (timeLeft <= 3) document.getElementById('singleQuizTimer').style.color = "#ff7675"; 
             if (timeLeft <= 0) {
                 clearInterval(singleTimerInterval);
-                submitSingleAnswer(-1, currentQ.ans, null); // 時間到，強制送出錯誤答案
+                submitSingleAnswer(-1, currentQ.ans, null); // 超時算錯
             }
         }
     }, 1000);
@@ -743,38 +774,37 @@ async function submitSingleAnswer(selectedIndex, correctIndex, btnElement) {
     singleIsAnswered = true;
     clearInterval(singleTimerInterval);
 
-    const timeLeft = parseInt(document.getElementById('singleQuizTimer').innerText);
-    let pointsEarned = 0;
+    const currentQ = singleQuestions[singleCurrentIndex];
+    const qText = currentQ.q; // 用題目文字當作錯題本的鑰匙
 
-    // 判斷對錯與計分邏輯
+    if (!userData.questionStats) userData.questionStats = {};
+    if (!userData.questionStats[qText]) userData.questionStats[qText] = { correct: 0, wrong: 0 };
+
     if (selectedIndex === correctIndex) {
         if (btnElement) {
-            btnElement.style.background = "#00b894"; // 答對變綠色
+            btnElement.style.background = "#00b894"; 
             btnElement.style.borderColor = "#00ce8d";
         }
-        // 越快答對分數越高！
-        if (timeLeft >= 8) pointsEarned = 50;
-        else if (timeLeft >= 4) pointsEarned = 30;
-        else pointsEarned = 10;
-        
-        // 🔥 如果是週末，點數直接乘以 2！
-        if (checkWeekendStatus()) pointsEarned *= 2;
+        // 答對，紀錄並直接給予該難度的點數
+        userData.questionStats[qText].correct++;
+        let pts = currentDiffPoints;
+        if (checkWeekendStatus()) pts *= 2;
+        singleTotalEarned += pts;
 
     } else {
         if (btnElement) {
-            btnElement.style.background = "#e74c3c"; // 答錯變紅色
+            btnElement.style.background = "#e74c3c"; 
             btnElement.style.borderColor = "#ff7675";
         }
-        // 把正確答案亮起來給學生看
         const allBtns = document.getElementById('singleQuizOptions').children;
         if(allBtns[correctIndex]) allBtns[correctIndex].style.background = "#00b894";
+        
+        // 答錯，記錄進錯題本，未來會優先出現
+        userData.questionStats[qText].wrong++;
     }
 
-    // 累加並顯示目前分數
-    singleTotalScore += pointsEarned;
-    document.getElementById('singleQuizScore').innerText = singleTotalScore;
+    document.getElementById('singleQuizScore').innerText = singleTotalEarned;
 
-    // 停頓 1.5 秒讓學生看清楚對錯，再進入下一題
     setTimeout(() => {
         singleCurrentIndex++;
         loadSingleQuestion();
@@ -782,33 +812,34 @@ async function submitSingleAnswer(selectedIndex, correctIndex, btnElement) {
 }
 
 async function endSingleQuiz() {
+    clearInterval(bgInterval); // 停止背景輪播
     document.getElementById('singleQuizOverlay').style.display = 'none';
-    document.getElementById('singleQuizProgress').style.width = '100%';
     
-    // 如果一分都沒拿到
-    if (singleTotalScore <= 0) {
-        return Swal.fire('挑戰結束', '這次沒有拿到分數喔，休息一下再接再厲！💪', 'info');
+    if (singleTotalEarned <= 0) {
+        // 即便 0 分也要把錯題紀錄更新上雲端
+        try { await updateDoc(userRef, { questionStats: userData.questionStats }); } catch(e){}
+        return Swal.fire('挑戰結束', '這次沒有拿到點數喔，沒關係，下次一定會更好！💪', 'info');
     }
 
-    // 結算並存入資料庫
-    const newTotalScore = (userData.score || 0) + singleTotalScore;
+    const newTotalScore = (userData.score || 0) + singleTotalEarned;
     
     try {
         await updateDoc(userRef, { 
             score: newTotalScore,
+            questionStats: userData.questionStats, // 同步錯題本大數據！
             history: [...(userData.history || []), { 
                 date: new Date().toLocaleDateString(), 
-                amount: singleTotalScore, 
+                amount: singleTotalEarned, 
                 reason: `[單人挑戰] 完成測驗` 
             }]
         });
         
         Swal.fire({
             title: '🎉 闖關成功！',
-            html: `太棒了！這次挑戰獲得了 <b style="color:#e17055; font-size:1.5rem;">${singleTotalScore}</b> 點！<br>點數已自動存入錢包。`,
+            html: `太棒了！這次挑戰妳紮紮實實地賺到了 <b style="color:#e17055; font-size:1.5rem;">${singleTotalEarned}</b> 點！<br>點數已自動存入錢包。`,
             icon: 'success'
         });
     } catch (err) {
-        Swal.fire('結算異常', '分數發放失敗，請通知 Winnie 老師。', 'error');
+        Swal.fire('結算異常', '點數發放失敗，請通知 Winnie 老師。', 'error');
     }
 }
