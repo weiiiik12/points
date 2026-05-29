@@ -1,7 +1,9 @@
 // js/main.js
+
 import { auth, db } from './firebase-init.js';
 import { signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { DAILY_QUESTIONS } from './questions.js'; // 🌟 成功掛載妳的專屬題庫！
 
 let currentUser = null;
 let currentUid = null; 
@@ -436,11 +438,20 @@ window.createTeamRoom = async function() {
     const roomCode = generateRoomCode();
     const roomRef = doc(db, "team_challenges", roomCode);
 
+    // 🎲 從妳的 DAILY_QUESTIONS 題庫中，隨機打亂並抽出 3 題
+    const shuffledQuestions = DAILY_QUESTIONS.sort(() => 0.5 - Math.random()).slice(0, 3);
+    const battleQuestions = shuffledQuestions.map(item => ({
+        q: item.question,
+        options: item.options,
+        ans: item.answer // 將欄位對應到擂台系統的格式
+    }));
+
     try {
         await setDoc(roomRef, {
             status: "waiting", 
             hostUid: currentUid,
             createdAt: Date.now(),
+            questions: battleQuestions, // 🌟 關鍵：把這 3 題存進雲端房間裡！
             players: {
                 [currentUid]: { name: userData.realName, isReady: false, score: 0 }
             }
@@ -565,12 +576,7 @@ function enterWaitingRoom(roomCode, isHost) {
 // ==========================================
 // ⚔️ 知識王擂台對戰系統
 // ==========================================
-const BATTLE_QUESTIONS = [
-    { q: "自然科：下列哪一個動物是昆蟲？", options: ["蜘蛛", "蝴蝶", "蜈蚣", "蚯蚓"], ans: 1 },
-    { q: "英文科：老師說 'Listen carefully' 是什麼意思？", options: ["大聲朗讀", "仔細聆聽", "請回座位", "打開課本"], ans: 1 },
-    { q: "數學科：8 x 7 = ？", options: ["54", "56", "64", "62"], ans: 1 }
-];
-
+let currentBattleQuestions = []; // 🌟 用來暫存從 Firebase 下載的本局考卷
 let arenaTimerInterval = null;
 let currentQuestionIndex = 0;
 let isAnswered = false;
@@ -580,6 +586,9 @@ function startBattleArena(roomCode, roomData) {
     const overlay = document.getElementById('battleArenaOverlay');
     if(overlay) overlay.style.display = 'flex';
     
+    // 🌟 抓取房主剛才存在雲端的那 3 題
+    currentBattleQuestions = roomData.questions || [];
+
     const players = roomData.players;
     const playerUids = Object.keys(players);
     const opponentUid = playerUids.find(uid => uid !== currentUid);
@@ -608,12 +617,13 @@ function startBattleArena(roomCode, roomData) {
 }
 
 function loadArenaQuestion() {
-    if (currentQuestionIndex >= BATTLE_QUESTIONS.length) {
+    // 🌟 檢查是不是已經把這份專屬考卷考完了
+    if (currentQuestionIndex >= currentBattleQuestions.length) {
         return endBattle(); 
     }
 
     isAnswered = false;
-    const currentQ = BATTLE_QUESTIONS[currentQuestionIndex];
+    const currentQ = currentBattleQuestions[currentQuestionIndex]; 
     document.getElementById('arenaQuestion').innerText = currentQ.q;
     
     const optionsContainer = document.getElementById('arenaOptions');
