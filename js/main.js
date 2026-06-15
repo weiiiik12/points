@@ -248,11 +248,16 @@ async function enterSystem(userCleanId, realName) {
         }
         updateStudentUI();
     } else {
-        const initialData = { realName: realName, nickname: "新進小達人", avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`, score: 100, grade: studentGrade, inventory: [], history: [{ time: new Date().toLocaleString(), amount: 100, reason: "系統啟用獎勵" }] };
-        await setDoc(userRef, initialData);
-        userData = initialData;
-        updateStudentUI();
-    }
+        const initialData = { 
+    realName: realName, 
+    nickname: "新進小達人", 
+    avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`, 
+    score: 100, 
+    grade: studentGrade, 
+    inventory: [], 
+    createdAt: new Date().toISOString(), // ⭐ 核心：務必紀錄帳號啟用日期以判斷首月優惠
+    history: [{ time: new Date().toLocaleString(), amount: 100, reason: "系統啟用獎勵" }] 
+};
 
     onSnapshot(userRef, (snap) => {
         if (snap.exists()) {
@@ -890,22 +895,39 @@ window.quitSingleQuiz = function() {
 };
 
 // ==========================================
-// 🏦 銀行活存與定存系統 (2.0 重製版)
+// 🏦 銀行活存與定存系統 (新制 1% / 3% 每週結算版)
 // ==========================================
 const BANK_SETTINGS = {
-    dailyRate: 0.02,        // 活存日利率 2%
-    fixedRate: 0.06,        // 定存利率 6%
-    fixedDays: 30,          // 定存鎖定天數 30天
-    interestHour: 20        // 每天晚上 20:00 發放活存利息
+    weeklyRate: 0.002,        // 建議改為 0.002 (即 0.2%)
+    fixedRate: 0.03,          // 定存維持 0.03 (即 3%)
+    fixedDays: 30,            // 定存鎖定天數 30天
+    settlementDay: 0,         // 每週日結算
+    interestHour: 20,         // 晚上 20:00 發放利息
+    minPointsNormal: 1000,    // 常態起息門檻
+    minPointsNewAccount: 100  // 新帳號首月起息門檻
 };
 
 window.updateBankUI = function() {
     if (!userData) return;
     
-    // 1. 計算活存預估利息
-    const todayEst = Math.floor((userData.score || 0) * BANK_SETTINGS.dailyRate);
+    // 1. 判斷帳號身分並計算本週預估利息
+    const now = new Date();
+    const accountCreated = userData.createdAt ? new Date(userData.createdAt) : new Date();
+    const isNewAccount = (now - accountCreated) <= 30 * 24 * 60 * 60 * 1000; // 30天內算新帳號
+    const requiredMin = isNewAccount ? BANK_SETTINGS.minPointsNewAccount : BANK_SETTINGS.minPoints;
+    
+    const currentScore = userData.score || 0;
+    const isQualified = currentScore >= requiredMin;
+    const weekEst = isQualified ? Math.floor(currentScore * BANK_SETTINGS.weeklyRate) : 0;
+    
     const estEl = document.getElementById('estInterestVal');
-    if (estEl) estEl.innerText = todayEst;
+    if (estEl) {
+        if (isQualified) {
+            estEl.innerHTML = `${weekEst} 點 <small style="color:#2ecc71;font-size:0.75rem;">(已達 ${requiredMin} 點門檻)</small>`;
+        } else {
+            estEl.innerHTML = `0 點 <small style="color:#e74c3c;font-size:0.75rem;">(未達 ${requiredMin} 點門檻)</small>`;
+        }
+    }
 
     // 2. 渲染定存清單
     const list = document.getElementById('depositList');
@@ -918,7 +940,6 @@ window.updateBankUI = function() {
     } else {
         if(empty) empty.style.display = 'none';
         let html = '';
-        const now = new Date();
         
         deposits.forEach(d => {
             const end = new Date(d.endDate); 
@@ -932,13 +953,13 @@ window.updateBankUI = function() {
             html += `
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
                 <div style="display:flex; justify-content:space-between; font-weight:bold; color:#2d3436; margin-bottom:5px; font-size:1.1rem;">
-                    <span>本金: ${d.amount}</span>
+                    <span>定存本金: ${d.amount}</span>
                     <span style="color:#00b894;">利息: +${profit}</span>
                 </div>
                 <div style="font-size:0.85rem; color:#888;">📅 存入日期: ${new Date(d.startDate).toLocaleString()}</div>
                 <div style="font-size:0.9rem; color:#e17055; font-weight:bold; margin-top:8px;">${timeStr}</div>
                 <button onclick="redeemDeposit(${d.id})" style="width:100%; margin-top:12px; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:${isMature?'pointer':'not-allowed'}; background:${isMature?'#f1c40f':'#edf2f7'}; color:${isMature?'#d35400':'#a0aec0'}; transition: 0.2s;" ${isMature?'':'disabled'}>
-                    ${isMature ? '💰 提領本金與利息' : '🔒 未到期無法提領'}
+                    ${isMature ? '💰 提領定存本利' : '🔒 未到期無法提領'}
                 </button>
             </div>`;
         });
@@ -946,78 +967,104 @@ window.updateBankUI = function() {
     }
 };
 
-// 3. 處理每秒倒數計時與發放活存利息判斷
+// 3. 倒數計時與每週結算利息觸發器
 setInterval(() => {
     if (!userData) return;
     const now = new Date();
     
-    // 計算距離下次發息時間
-    let target = new Date(now); 
-    target.setHours(BANK_SETTINGS.interestHour, 0, 0, 0); 
-    if (now >= target) target.setDate(target.getDate() + 1);
+    // 計算距離本週日 20:00 的倒數
+    let target = new Date(now);
+    const currentDay = target.getDay();
+    const distanceToSunday = (BANK_SETTINGS.settlementDay - currentDay + 7) % 7;
+    target.setDate(target.getDate() + distanceToSunday);
+    target.setHours(BANK_SETTINGS.interestHour, 0, 0, 0);
+    
+    if (now >= target) {
+        target.setDate(target.getDate() + 7); // 如果這週日已經過了，指到下週日
+    }
     
     const diff = target - now;
+    const days = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
     
     const timerEl = document.getElementById('interestTimer');
-    if (timerEl) timerEl.innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (timerEl) timerEl.innerText = `${days}天 ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     
-    // 定時刷新清單狀態 (讓倒數天數/按鈕即時變更)
     if(window.updateBankUI) window.updateBankUI();
 
-    // === 活存發息邏輯 ===
+    // === 活存自動每週發息檢設 ===
     if (!isGuest && userRef) {
-        const todayStr = now.toDateString();
-        // 如果超過晚上八點，且今天尚未領取利息
-        if (now.getHours() >= BANK_SETTINGS.interestHour) {
-            if (userData.lastLoginDate !== todayStr && (userData.score || 0) > 0) {
-                const interest = Math.floor(userData.score * BANK_SETTINGS.dailyRate);
-                if (interest > 0) {
-                    userData.score += interest;
-                    userData.lastLoginDate = todayStr;
-                    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => {
-                        firestore.updateDoc(userRef, {
-                            score: userData.score,
-                            lastLoginDate: todayStr,
-                            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: "🏦 銀行活存利息", amount: interest }]
+        // 以 "年份-第幾週" 作為本週唯一識別字串 (例如 2026-W25)
+        const getWeekIdentifier = (date) => {
+            const oneJan = new Date(date.getFullYear(), 0, 1);
+            const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
+            const weekIdx = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
+            return `${date.getFullYear()}-W${weekIdx}`;
+        };
+        
+        const currentWeekStr = getWeekIdentifier(now);
+
+        // 如果當下是星期天，且時間超過晚上 20:00
+        if (now.getDay() === BANK_SETTINGS.settlementDay && now.getHours() >= BANK_SETTINGS.interestHour) {
+            // 檢查資料庫中紀錄的「上次結算週碼」是否和這週不同
+            if (userData.lastSettlementWeek !== currentWeekStr) {
+                const accountCreated = userData.createdAt ? new Date(userData.createdAt) : new Date();
+                const isNewAccount = (now - accountCreated) <= 30 * 24 * 60 * 60 * 1000;
+                const requiredMin = isNewAccount ? BANK_SETTINGS.minPointsNewAccount : BANK_SETTINGS.minPoints;
+
+                if ((userData.score || 0) >= requiredMin) {
+                    const interest = Math.floor(userData.score * BANK_SETTINGS.weeklyRate);
+                    if (interest > 0) {
+                        userData.score += interest;
+                        userData.lastSettlementWeek = currentWeekStr;
+                        
+                        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => {
+                            firestore.updateDoc(userRef, {
+                                score: userData.score,
+                                lastSettlementWeek: currentWeekStr,
+                                history: [...(userData.history || []), { 
+                                    date: new Date().toLocaleDateString(), 
+                                    reason: `🏦 皓銀行每週利息結算 (${isNewAccount ? '新創優惠' : '常態達標'})`, 
+                                    amount: interest 
+                                }]
+                            });
+                            Swal.fire({ title: '💰 皓銀行每週結算！', text: `恭喜！本週活存資產達標，獲得週利息 +${interest} 點！`, icon: 'success' });
                         });
-                        Swal.fire({ title: '💰 每日利息發放！', text: `昨天的存款讓妳今天自動獲得了 ${interest} 點！`, icon: 'success' });
-                    });
-                } else {
-                    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => firestore.updateDoc(userRef, { lastLoginDate: todayStr }));
+                        return;
+                    }
                 }
-            }
-        } else {
-            // 還沒到晚上八點，但換日了，更新一下登入日期記錄，防止未來誤判
-            if (userData.lastLoginDate === undefined) {
-                userData.lastLoginDate = todayStr;
-                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => firestore.updateDoc(userRef, { lastLoginDate: todayStr }));
+                
+                // 即使沒達標或利息為0，也必須標記這週已審查過，避免重複計算
+                userData.lastSettlementWeek = currentWeekStr;
+                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => {
+                    firestore.updateDoc(userRef, { lastSettlementWeek: currentWeekStr });
+                });
             }
         }
     }
 }, 1000);
 
-// 4. 申請定存
+// 4. 申請定存 (3%)
 window.createDeposit = async function() {
     if (!checkGuestPermission() || !userData) return;
     const amtInput = document.getElementById('depositAmount');
     const amt = parseInt(amtInput.value);
     
     if (!amt || amt <= 0) return Swal.fire('錯誤', '請輸入正確的整數金額！', 'error');
-    if (amt > userData.score) return Swal.fire('錯誤', '錢包裡的點數不夠喔！', 'error');
+    if (amt > userData.score) return Swal.fire('錯誤', '妳包包裡的點數不夠存入定存喔！', 'error');
 
     const total = amt * Math.pow(1 + BANK_SETTINGS.fixedRate, BANK_SETTINGS.fixedDays);
     const profit = Math.floor(total - amt);
 
     Swal.fire({
-        title: '確定要建立定存嗎？',
-        html: `存入: <b>${amt}</b> 點<br>鎖定: <b>${BANK_SETTINGS.fixedDays}</b> 天<br>預計獲利: <b style="color:#00b894">+${profit}</b> 點<br><br><span style="color:#e74c3c;font-size:0.9rem;font-weight:bold;">⚠️ 期間內絕對不能解約或動用這筆錢喔！</span>`,
+        title: '確定要辦理定存嗎？',
+        html: `定存金額: <b>${amt}</b> 點<br>鎖定天數: <b>${BANK_SETTINGS.fixedDays}</b> 天<br>到期預計獲得利息: <b style="color:#00b894">+${profit}</b> 點<br><br><span style="color:#e74c3c;font-size:0.85rem;font-weight:bold;">⚠️ 提醒：定存一經確認後，30天內絕不能中途解約提領！</span>`,
         icon: 'question', showCancelButton: true, confirmButtonText: '確定存入', confirmButtonColor: '#00b894'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            Swal.fire({ title: '寫入銀行中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            Swal.fire({ title: '定存單寫入雲端中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
             const now = new Date(); 
             const end = new Date(now); 
             end.setDate(end.getDate() + BANK_SETTINGS.fixedDays);
@@ -1030,11 +1077,11 @@ window.createDeposit = async function() {
                 await updateDoc(userRef, {
                     score: userData.score - amt,
                     deposits: [...currentDeposits, newDeposit],
-                    history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: "申請定存", amount: -amt }]
+                    history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: `[定存] 辦理30天定存`, amount: -amt }]
                 });
                 amtInput.value = '';
-                Swal.fire('存入成功', '定存單已建立！努力存錢是好習慣！', 'success');
-            } catch(e) { Swal.fire('連線錯誤', '定存失敗，請稍後再試', 'error'); }
+                Swal.fire('辦理成功', '您的定存單已成功生效，開始期待到期吧！', 'success');
+            } catch(e) { Swal.fire('連線錯誤', '辦理定存失敗，請檢查網路連線', 'error'); }
         }
     });
 };
@@ -1051,18 +1098,18 @@ window.redeemDeposit = async function(id) {
     const total = dep.amount * Math.pow(1 + BANK_SETTINGS.fixedRate, BANK_SETTINGS.fixedDays);
     const profit = Math.floor(total - dep.amount);
     
-    Swal.fire({ title: '提領中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    Swal.fire({ title: '提領審查中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     
     try {
         const updatedDeposits = [...currentDeposits];
-        updatedDeposits.splice(idx, 1); // 移除這筆定存單
+        updatedDeposits.splice(idx, 1);
         
         const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
         await updateDoc(userRef, {
             score: (userData.score || 0) + dep.amount + profit,
             deposits: updatedDeposits,
-            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: "定存到期領回", amount: dep.amount + profit }]
+            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: `[定存] 定存到期提領`, amount: dep.amount + profit }]
         });
-        Swal.fire('🎉 定存到期', `恭喜！本金 ${dep.amount} 加上 利息 ${profit} 已經入帳到錢包了！`, 'success');
-    } catch(e) { Swal.fire('連線錯誤', '領回失敗，請稍後再試', 'error'); }
+        Swal.fire('🎉 提領成功', `太棒了！定存本金 ${dep.amount} 與利息 ${profit} 已全數匯入錢包！`, 'success');
+    } catch(e) { Swal.fire('連線錯誤', '提領失敗，請稍後再試', 'error'); }
 };
