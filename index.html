@@ -201,6 +201,20 @@
             </div>
         </div>
 
+        <div class="school-card-box" style="border-left: 5px solid #2ecc71; margin-bottom: 20px;">
+    <h3 class="school-title" style="color:#2ecc71;">🧾 加扣點交易明細</h3>
+    <div style="display:flex; gap:10px; margin-bottom: 10px;">
+        <select id="historyMonthFilter" class="school-input" onchange="renderHistory()">
+            <option value="all">所有月份</option>
+            <!-- 可由 JS 動態生成月份選項 -->
+        </select>
+    </div>
+    <div id="historyListContainer" style="max-height: 250px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 8px;">
+        <!-- 交易明細列表將由 JS 渲染 -->
+    </div>
+</div>
+        
+
     </div>
 
     <footer class="admin-footer" style="margin-top: 40px; text-align: center; padding-bottom: 20px;">
