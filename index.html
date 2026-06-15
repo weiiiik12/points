@@ -135,7 +135,33 @@
     </div>
 
     <div id="tab-bank" class="section">
-        <div class="bank-card"><div class="bank-rate">🏦 皓銀行</div><div class="bank-est">💰 活存點數載入中...</div></div>
+        <div class="bank-card">
+            <div class="bank-rate">🏦 皓銀行 (活存 2% / 定存 6%)</div>
+            <div class="bank-est">
+                💰 活存今日預估利息：<span id="estInterestVal" style="color:#ffeaa7;">0</span> 點
+            </div>
+            <div style="font-size:0.85rem; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; margin-top:12px; text-align: left;">
+                💡 每天晚上 <strong>20:00</strong> 自動結算發放利息 (利滾利複利計算)
+            </div>
+            <div style="text-align:center; margin-top:15px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top:10px;">
+                <div style="font-size:0.8rem; margin-bottom:5px; color:#eee;">距離下次發利息還有：</div>
+                <div id="interestTimer" style="font-family: monospace; font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 8px; display: inline-block;">--:--:--</div>
+            </div>
+        </div>
+
+        <div class="school-card-box" style="border-left: 5px solid #00b894;">
+            <h3 class="school-title" style="color:#00b894;">🔒 申請超級定存</h3>
+            <p class="school-desc">鎖定 <strong>30天</strong>，到期獲得 <strong>6%</strong> 超高獲利！期間內資金絕對無法動用。</p>
+            <input type="number" id="depositAmount" class="school-input" placeholder="輸入要存的點數 (整數)">
+            <button class="btn-school-action" style="background: linear-gradient(135deg, #00b894, #00ce8d); margin-top:12px;" onclick="createDeposit()">確認存入</button>
+        </div>
+
+        <div class="school-card-box" style="border-left: 5px solid #f1c40f;">
+            <h3 class="school-title" style="color:#f1c40f;">📜 我的定存單</h3>
+            <p class="school-desc">到期後，請手動點擊「領取」按鈕將本金與利息提領至錢包。</p>
+            <div id="depositList" style="margin-top: 10px;"></div>
+            <div id="depositEmpty" style="text-align:center; color:#999; padding:15px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc;">目前沒有定存單</div>
+        </div>
     </div>
 
     <div id="tab-forum" class="section">
