@@ -887,3 +887,181 @@ window.quitSingleQuiz = function() {
         }
     });
 };
+
+// ==========================================
+// 🏦 銀行活存與定存系統 (2.0 重製版)
+// ==========================================
+const BANK_SETTINGS = {
+    dailyRate: 0.02,        // 活存日利率 2%
+    fixedRate: 0.06,        // 定存利率 6%
+    fixedDays: 30,          // 定存鎖定天數 30天
+    interestHour: 20        // 每天晚上 20:00 發放活存利息
+};
+
+window.updateBankUI = function() {
+    if (!userData) return;
+    
+    // 1. 計算活存預估利息
+    const todayEst = Math.floor((userData.score || 0) * BANK_SETTINGS.dailyRate);
+    const estEl = document.getElementById('estInterestVal');
+    if (estEl) estEl.innerText = todayEst;
+
+    // 2. 渲染定存清單
+    const list = document.getElementById('depositList');
+    const empty = document.getElementById('depositEmpty');
+    const deposits = userData.deposits || [];
+    
+    if (deposits.length === 0) {
+        if(list) list.innerHTML = '';
+        if(empty) empty.style.display = 'block';
+    } else {
+        if(empty) empty.style.display = 'none';
+        let html = '';
+        const now = new Date();
+        
+        deposits.forEach(d => {
+            const end = new Date(d.endDate); 
+            const isMature = now >= end; 
+            const timeLeft = end - now;
+            const total = d.amount * Math.pow(1 + BANK_SETTINGS.fixedRate, BANK_SETTINGS.fixedDays);
+            const profit = Math.floor(total - d.amount);
+            
+            let timeStr = isMature ? "✅ 已到期，可領回" : `⏳ 剩餘鎖定：${Math.floor(timeLeft / 86400000)}天 ${Math.floor((timeLeft % 86400000) / 3600000)}時`;
+
+            html += `
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; color:#2d3436; margin-bottom:5px; font-size:1.1rem;">
+                    <span>本金: ${d.amount}</span>
+                    <span style="color:#00b894;">利息: +${profit}</span>
+                </div>
+                <div style="font-size:0.85rem; color:#888;">📅 存入日期: ${new Date(d.startDate).toLocaleString()}</div>
+                <div style="font-size:0.9rem; color:#e17055; font-weight:bold; margin-top:8px;">${timeStr}</div>
+                <button onclick="redeemDeposit(${d.id})" style="width:100%; margin-top:12px; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:${isMature?'pointer':'not-allowed'}; background:${isMature?'#f1c40f':'#edf2f7'}; color:${isMature?'#d35400':'#a0aec0'}; transition: 0.2s;" ${isMature?'':'disabled'}>
+                    ${isMature ? '💰 提領本金與利息' : '🔒 未到期無法提領'}
+                </button>
+            </div>`;
+        });
+        if(list) list.innerHTML = html;
+    }
+};
+
+// 3. 處理每秒倒數計時與發放活存利息判斷
+setInterval(() => {
+    if (!userData) return;
+    const now = new Date();
+    
+    // 計算距離下次發息時間
+    let target = new Date(now); 
+    target.setHours(BANK_SETTINGS.interestHour, 0, 0, 0); 
+    if (now >= target) target.setDate(target.getDate() + 1);
+    
+    const diff = target - now;
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    
+    const timerEl = document.getElementById('interestTimer');
+    if (timerEl) timerEl.innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    
+    // 定時刷新清單狀態 (讓倒數天數/按鈕即時變更)
+    if(window.updateBankUI) window.updateBankUI();
+
+    // === 活存發息邏輯 ===
+    if (!isGuest && userRef) {
+        const todayStr = now.toDateString();
+        // 如果超過晚上八點，且今天尚未領取利息
+        if (now.getHours() >= BANK_SETTINGS.interestHour) {
+            if (userData.lastLoginDate !== todayStr && (userData.score || 0) > 0) {
+                const interest = Math.floor(userData.score * BANK_SETTINGS.dailyRate);
+                if (interest > 0) {
+                    userData.score += interest;
+                    userData.lastLoginDate = todayStr;
+                    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => {
+                        firestore.updateDoc(userRef, {
+                            score: userData.score,
+                            lastLoginDate: todayStr,
+                            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: "🏦 銀行活存利息", amount: interest }]
+                        });
+                        Swal.fire({ title: '💰 每日利息發放！', text: `昨天的存款讓妳今天自動獲得了 ${interest} 點！`, icon: 'success' });
+                    });
+                } else {
+                    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => firestore.updateDoc(userRef, { lastLoginDate: todayStr }));
+                }
+            }
+        } else {
+            // 還沒到晚上八點，但換日了，更新一下登入日期記錄，防止未來誤判
+            if (userData.lastLoginDate === undefined) {
+                userData.lastLoginDate = todayStr;
+                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((firestore) => firestore.updateDoc(userRef, { lastLoginDate: todayStr }));
+            }
+        }
+    }
+}, 1000);
+
+// 4. 申請定存
+window.createDeposit = async function() {
+    if (!checkGuestPermission() || !userData) return;
+    const amtInput = document.getElementById('depositAmount');
+    const amt = parseInt(amtInput.value);
+    
+    if (!amt || amt <= 0) return Swal.fire('錯誤', '請輸入正確的整數金額！', 'error');
+    if (amt > userData.score) return Swal.fire('錯誤', '錢包裡的點數不夠喔！', 'error');
+
+    const total = amt * Math.pow(1 + BANK_SETTINGS.fixedRate, BANK_SETTINGS.fixedDays);
+    const profit = Math.floor(total - amt);
+
+    Swal.fire({
+        title: '確定要建立定存嗎？',
+        html: `存入: <b>${amt}</b> 點<br>鎖定: <b>${BANK_SETTINGS.fixedDays}</b> 天<br>預計獲利: <b style="color:#00b894">+${profit}</b> 點<br><br><span style="color:#e74c3c;font-size:0.9rem;font-weight:bold;">⚠️ 期間內絕對不能解約或動用這筆錢喔！</span>`,
+        icon: 'question', showCancelButton: true, confirmButtonText: '確定存入', confirmButtonColor: '#00b894'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: '寫入銀行中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            const now = new Date(); 
+            const end = new Date(now); 
+            end.setDate(end.getDate() + BANK_SETTINGS.fixedDays);
+            
+            const newDeposit = { id: Date.now(), amount: amt, startDate: now.toISOString(), endDate: end.toISOString() };
+            const currentDeposits = userData.deposits || [];
+            
+            try {
+                const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                await updateDoc(userRef, {
+                    score: userData.score - amt,
+                    deposits: [...currentDeposits, newDeposit],
+                    history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: "申請定存", amount: -amt }]
+                });
+                amtInput.value = '';
+                Swal.fire('存入成功', '定存單已建立！努力存錢是好習慣！', 'success');
+            } catch(e) { Swal.fire('連線錯誤', '定存失敗，請稍後再試', 'error'); }
+        }
+    });
+};
+
+// 5. 領回定存
+window.redeemDeposit = async function(id) {
+    if (!checkGuestPermission() || !userData) return;
+    
+    const currentDeposits = userData.deposits || [];
+    const idx = currentDeposits.findIndex(d => d.id === id);
+    if (idx === -1) return;
+    
+    const dep = currentDeposits[idx];
+    const total = dep.amount * Math.pow(1 + BANK_SETTINGS.fixedRate, BANK_SETTINGS.fixedDays);
+    const profit = Math.floor(total - dep.amount);
+    
+    Swal.fire({ title: '提領中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    
+    try {
+        const updatedDeposits = [...currentDeposits];
+        updatedDeposits.splice(idx, 1); // 移除這筆定存單
+        
+        const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        await updateDoc(userRef, {
+            score: (userData.score || 0) + dep.amount + profit,
+            deposits: updatedDeposits,
+            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: "定存到期領回", amount: dep.amount + profit }]
+        });
+        Swal.fire('🎉 定存到期', `恭喜！本金 ${dep.amount} 加上 利息 ${profit} 已經入帳到錢包了！`, 'success');
+    } catch(e) { Swal.fire('連線錯誤', '領回失敗，請稍後再試', 'error'); }
+};
