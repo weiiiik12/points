@@ -248,15 +248,57 @@ async function enterSystem(userCleanId, realName) {
         }
         updateStudentUI();
     } else {
-        const initialData = { 
+        // 在 enterSystem() 函式中，當建立新帳號時 (docSnap.exists() 為 false 時)：
+const initialData = { 
     realName: realName, 
     nickname: "新進小達人", 
     avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`, 
+    avatarEquip: { outfit: '新手制服', accessory: '無' }, // ⭐ 新增：預設新手裝扮
+    virtualBag: [], // ⭐ 新增：虛擬物品背包 (不佔用實體 10 格空間)
     score: 100, 
     grade: studentGrade, 
-    inventory: [], 
-    createdAt: new Date().toISOString(), // ⭐ 核心：務必紀錄帳號啟用日期以判斷首月優惠
+    inventory: [], // 實體背包 (最大10個)
+    createdAt: new Date().toISOString(),
     history: [{ time: new Date().toLocaleString(), amount: 100, reason: "系統啟用獎勵" }] 
+};
+
+// ==========================================
+// 盲盒抽獎邏輯 (1~5星)
+// ==========================================
+window.drawBlindBox = async function() {
+    const cost = 50; // 盲盒費用
+    if (userData.score < cost) return Swal.fire('點數不足', `需要 ${cost} 點才能抽盲盒喔！`, 'warning');
+
+    const gachaPool = [
+        { name: '普通棒球帽', star: 1, prob: 50 },
+        { name: '炫酷墨鏡', star: 2, prob: 30 },
+        { name: '魔法斗篷', star: 3, prob: 12 },
+        { name: '神聖光環', star: 4, prob: 7 },
+        { name: '傳說黃金鎧甲', star: 5, prob: 1 }
+    ];
+
+    let rand = Math.random() * 100;
+    let cumulative = 0;
+    let wonItem = gachaPool[0];
+    
+    for (let item of gachaPool) {
+        cumulative += item.prob;
+        if (rand <= cumulative) { wonItem = item; break; }
+    }
+
+    Swal.fire({ title: '🎲 開啟盲盒中...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        await updateDoc(userRef, {
+            score: userData.score - cost,
+            virtualBag: [...(userData.virtualBag || []), { name: wonItem.name, star: wonItem.star, date: new Date().toLocaleDateString() }],
+            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: `[盲盒] 抽中 ${wonItem.star}星 ${wonItem.name}`, amount: -cost }]
+        });
+        
+        let starStr = '⭐'.repeat(wonItem.star);
+        Swal.fire('🎉 開啟成功！', `獲得虛擬配件：<br><b style="font-size:1.2rem; color:#e17055;">${starStr} ${wonItem.name}</b>`, 'success');
+    } catch(e) { Swal.fire('錯誤', '連線異常', 'error'); }
 };
 
     onSnapshot(userRef, (snap) => {
@@ -426,7 +468,39 @@ function renderLevelGrid() {
 window.selectSubject = function(subject) { currentSelectedSubject = subject; document.querySelectorAll('#subjectFilterGroup .btn-filter-opt').forEach(btn => btn.classList.remove('active')); if (event && event.currentTarget) event.currentTarget.classList.add('active'); renderLevelGrid(); };
 window.switchTab = function(tabId) { document.querySelectorAll('.section').forEach(content => content.style.display = 'none'); document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active')); const targetTab = document.getElementById(tabId); if (targetTab) targetTab.style.display = 'block'; if (event && event.currentTarget) event.currentTarget.classList.add('active'); };
 function checkWeekendStatus() { const today = new Date(); const isWeekend = (today.getDay() === 0 || today.getDay() === 6); const badge = document.getElementById('weekendBadge'); if (badge) badge.style.display = isWeekend ? 'inline-block' : 'none'; return isWeekend; }
-window.redeemPromoCode = async function() { Swal.fire('提示', '請向導師領取最新兌換碼。', 'info'); };
+window.redeemPromoCode = async function() {
+    const code = document.getElementById('promoCodeInput').value.trim().toUpperCase();
+    if (!code) return Swal.fire('錯誤', '請輸入兌換碼', 'warning');
+
+    Swal.fire({ title: '驗證中...', didOpen: () => Swal.showLoading() });
+
+    try {
+        const { doc, getDoc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        const codeRef = doc(db, "promo_codes", code);
+        const codeSnap = await getDoc(codeRef);
+
+        if (!codeSnap.exists()) return Swal.fire('無效的兌換碼', '請確認是否輸入正確', 'error');
+
+        const codeData = codeSnap.data();
+        const now = Date.now();
+
+        // 驗證期限與次數
+        if (codeData.expiresAt && now > codeData.expiresAt) return Swal.fire('兌換失敗', '此兌換碼已過期！', 'error');
+        if (codeData.currentUses >= codeData.maxUses) return Swal.fire('兌換失敗', '此兌換碼已被使用完畢！', 'error');
+        if ((userData.redeemedCodes || []).includes(code)) return Swal.fire('兌換失敗', '您已經使用過這個兌換碼囉！', 'warning');
+
+        // 執行兌換
+        await updateDoc(codeRef, { currentUses: codeData.currentUses + 1 });
+        await updateDoc(userRef, {
+            score: userData.score + codeData.rewardPoints,
+            redeemedCodes: [...(userData.redeemedCodes || []), code],
+            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: `[兌換碼] ${code}`, amount: codeData.rewardPoints }]
+        });
+
+        Swal.fire('🎉 兌換成功', `獲得 ${codeData.rewardPoints} 點！`, 'success');
+        document.getElementById('promoCodeInput').value = '';
+    } catch(e) { Swal.fire('連線異常', '請稍後再試', 'error'); }
+};
 window.startWeekendQuiz = function() { Swal.fire('未到開啟時間', '週末才會限時開放隱藏題庫喔！', 'info'); };
 async function openAdminPanel() {
     if (!checkGuestPermission()) return;
@@ -1112,4 +1186,98 @@ window.redeemDeposit = async function(id) {
         });
         Swal.fire('🎉 提領成功', `太棒了！定存本金 ${dep.amount} 與利息 ${profit} 已全數匯入錢包！`, 'success');
     } catch(e) { Swal.fire('連線錯誤', '提領失敗，請稍後再試', 'error'); }
+};
+
+// ==========================================
+// 交易所：將實體背包物品掛上交易行
+// ==========================================
+window.listOnMarket = async function(inventoryIndex, itemName) {
+    const { value: priceStr } = await Swal.fire({
+        title: `📦 上架【${itemName}】`,
+        input: 'number',
+        inputPlaceholder: '請輸入欲售出的點數價格',
+        html: `<p style="font-size:0.85rem; color:#e74c3c; font-weight:bold;">⚠️ 注意：<br>1. 將向賣家收取 5% 上架手續費 (直接扣點)。<br>2. 若7天後未售出將自動下架，手續費不返還。</p>`,
+        showCancelButton: true, confirmButtonText: '確定上架'
+    });
+
+    const price = parseInt(priceStr);
+    if (!price || price <= 0) return;
+
+    const listingFee = Math.max(1, Math.ceil(price * 0.05)); // 至少 1 點手續費
+    if (userData.score < listingFee) return Swal.fire('點數不足', `上架需要 ${listingFee} 點手續費！`, 'error');
+
+    Swal.fire({ title: '正在將物品送往交易所...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const itemToSell = userData.inventory[inventoryIndex];
+    const newInventory = [...userData.inventory];
+    newInventory.splice(inventoryIndex, 1); // 從背包移除
+
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + 7); // 7天後過期
+
+    try {
+        const { collection, addDoc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        
+        // 1. 寫入公開市場資料庫 (market_listings)
+        await addDoc(collection(db, "market_listings"), {
+            sellerUid: currentUid,
+            sellerName: userData.nickname,
+            itemName: itemToSell.title,
+            price: price,
+            status: "active",
+            expiresAt: expireDate.getTime(),
+            listedAt: Date.now()
+        });
+
+        // 2. 更新玩家自身背包與扣除手續費
+        await updateDoc(userRef, {
+            score: userData.score - listingFee,
+            inventory: newInventory,
+            history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: `[交易所] 支付上架費 (${itemName})`, amount: -listingFee }]
+        });
+
+        Swal.fire('✅ 上架成功', `物品已出現在交易所中！`, 'success');
+    } catch(e) { Swal.fire('上架失敗', e.message, 'error'); }
+};
+
+// ==========================================
+// 交易所：購買別人上架的物品
+// ==========================================
+window.buyFromMarket = async function(listingId, itemName, price, sellerUid) {
+    if ((userData.inventory || []).length >= 10) return Swal.fire('背包已滿', '實體背包最多只能裝 10 個物品，請先找老師核銷！', 'warning');
+
+    const buyerFee = Math.max(1, Math.ceil(price * 0.05));
+    const totalCost = price + buyerFee;
+
+    if (userData.score < totalCost) return Swal.fire('點數不足', `含 5% 買方手續費，共需要 ${totalCost} 點！`, 'error');
+
+    Swal.fire({
+        title: '確定要購買嗎？',
+        html: `商品：<b>${itemName}</b><br>價格：${price} 點<br>買方手續費(5%)：${buyerFee} 點<br><hr>總計支付：<b style="color:#e74c3c;">${totalCost}</b> 點`,
+        showCancelButton: true, confirmButtonText: '買下去！'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const { doc, updateDoc, increment } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                
+                // 1. 關閉該筆交易狀態
+                await updateDoc(doc(db, "market_listings", listingId), { status: "sold", buyerUid: currentUid });
+
+                // 2. 將錢轉給賣家 (直接使用 increment 增加點數)
+                await updateDoc(doc(db, "users", sellerUid), { 
+                    score: increment(price),
+                    history: increment([{ date: new Date().toLocaleDateString(), reason: `[交易所] 售出 ${itemName}`, amount: price }]) // 這裡需注意 firestore 陣列更新語法，通常用 arrayUnion
+                });
+
+                // 3. 扣除買家錢並加入背包
+                await updateDoc(userRef, {
+                    score: userData.score - totalCost,
+                    inventory: [...(userData.inventory || []), { title: itemName, date: new Date().toLocaleDateString(), status: "未領取" }],
+                    history: [...(userData.history || []), { date: new Date().toLocaleDateString(), reason: `[交易所] 購買 ${itemName}`, amount: -totalCost }]
+                });
+
+                Swal.fire('🎉 交易成功', '物品已放入您的背包！', 'success');
+            } catch(e) { Swal.fire('交易失敗', '物品可能已被買走或連線錯誤', 'error'); }
+        }
+    });
 };
