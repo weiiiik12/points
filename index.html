@@ -135,30 +135,33 @@
     </div>
 
     <div id="tab-bank" class="section">
-        <div class="bank-card">
-            <div class="bank-rate">🏦 皓銀行 (活存 2% / 定存 6%)</div>
+        <div class="bank-card" style="background: linear-gradient(135deg, #2980b9, #2c3e50);">
+            <div class="bank-rate">🏦 皓銀行 (活存 1% / 定存 3%)</div>
             <div class="bank-est">
-                💰 活存今日預估利息：<span id="estInterestVal" style="color:#ffeaa7;">0</span> 點
+                💰 活存本週預估收益：<span id="estInterestVal" style="color:#ffeaa7;">0</span> 點
             </div>
-            <div style="font-size:0.85rem; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; margin-top:12px; text-align: left;">
-                💡 每天晚上 <strong>20:00</strong> 自動結算發放利息 (利滾利複利計算)
+            <div style="font-size:0.82rem; background:rgba(0,0,0,0.25); padding:10px; border-radius:8px; margin-top:12px; text-align: left; line-height: 1.4;">
+                📢 <strong>計息新制說明：</strong><br>
+                • 常態起息門檻為 <strong>1000 點</strong>。<br>
+                • 新創帳號享有首月（30天內）<strong>100 點</strong>起息優惠！<br>
+                • 餘額未達門檻當日不計息，於<strong>每週日 20:00</strong> 統一結算發放。
             </div>
             <div style="text-align:center; margin-top:15px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top:10px;">
-                <div style="font-size:0.8rem; margin-bottom:5px; color:#eee;">距離下次發利息還有：</div>
-                <div id="interestTimer" style="font-family: monospace; font-size: 1.5rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 8px; display: inline-block;">--:--:--</div>
+                <div style="font-size:0.8rem; margin-bottom:5px; color:#eee;">距離本週利息結算還有：</div>
+                <div id="interestTimer" style="font-family: monospace; font-size: 1.4rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 8px; display: inline-block;">--天 --:--:--</div>
             </div>
         </div>
 
         <div class="school-card-box" style="border-left: 5px solid #00b894;">
-            <h3 class="school-title" style="color:#00b894;">🔒 申請超級定存</h3>
-            <p class="school-desc">鎖定 <strong>30天</strong>，到期獲得 <strong>6%</strong> 超高獲利！期間內資金絕對無法動用。</p>
-            <input type="number" id="depositAmount" class="school-input" placeholder="輸入要存的點數 (整數)">
-            <button class="btn-school-action" style="background: linear-gradient(135deg, #00b894, #00ce8d); margin-top:12px;" onclick="createDeposit()">確認存入</button>
+            <h3 class="school-title" style="color:#00b894;">🔒 申請定存關卡</h3>
+            <p class="school-desc">鎖定 <strong>30天</strong>，到期獲得 <strong>3%</strong> 穩健獲利！期間內資金無法提前動用。</p>
+            <input type="number" id="depositAmount" class="school-input" placeholder="輸入要存的點数 (整數)">
+            <button class="btn-school-action" style="background: linear-gradient(135deg, #00b894, #00ce8d); margin-top:12px;" onclick="createDeposit()">確認存入定存</button>
         </div>
 
         <div class="school-card-box" style="border-left: 5px solid #f1c40f;">
             <h3 class="school-title" style="color:#f1c40f;">📜 我的定存單</h3>
-            <p class="school-desc">到期後，請手動點擊「領取」按鈕將本金與利息提領至錢包。</p>
+            <p class="school-desc">到期後，請點擊「提領」按鈕將本金與利息收回錢包中。</p>
             <div id="depositList" style="margin-top: 10px;"></div>
             <div id="depositEmpty" style="text-align:center; color:#999; padding:15px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc;">目前沒有定存單</div>
         </div>
