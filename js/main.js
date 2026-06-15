@@ -248,22 +248,38 @@ async function enterSystem(userCleanId, realName) {
         }
         updateStudentUI();
     } else {
-        // 在 enterSystem() 函式中，當建立新帳號時 (docSnap.exists() 為 false 時)：
-const initialData = { 
-    realName: realName, 
-    nickname: "新進小達人", 
-    avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`, 
-    avatarEquip: { outfit: '新手制服', accessory: '無' }, // ⭐ 新增：預設新手裝扮
-    virtualBag: [], // ⭐ 新增：虛擬物品背包 (不佔用實體 10 格空間)
-    score: 100, 
-    grade: studentGrade, 
-    inventory: [], // 實體背包 (最大10個)
-    createdAt: new Date().toISOString(),
-    history: [{ time: new Date().toLocaleString(), amount: 100, reason: "系統啟用獎勵" }] 
-};
+        // ⭐ 修正 1：建立新帳號資料，並加回最重要的 setDoc 存檔指令！
+        const initialData = { 
+            realName: realName, 
+            nickname: "新進小達人", 
+            avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userCleanId}`, 
+            avatarEquip: { outfit: '新手制服', accessory: '無' }, 
+            virtualBag: [], 
+            score: 100, 
+            grade: studentGrade, 
+            inventory: [], 
+            createdAt: new Date().toISOString(),
+            history: [{ time: new Date().toLocaleString(), amount: 100, reason: "系統啟用獎勵" }] 
+        };
+        
+        await setDoc(userRef, initialData); // 就是這一行把資料寫進雲端！
+        userData = initialData;
+        updateStudentUI();
+    }
+
+    onSnapshot(userRef, (snap) => {
+        if (snap.exists()) {
+            userData = snap.data();
+            updateStudentUI();
+        }
+    });
+
+    renderLevelGrid(); 
+    if(event && event.type === 'click') Swal.fire('登入成功', `歡迎來到皓孩子網，${realName}！✨`, 'success');
+} // <--- ⭐ 修正 2：確保 enterSystem 函式正確關閉
 
 // ==========================================
-// 盲盒抽獎邏輯 (1~5星)
+// ⭐ 修正 3：盲盒抽獎獨立出來，不能包在登入判斷式裡面！
 // ==========================================
 window.drawBlindBox = async function() {
     const cost = 50; // 盲盒費用
@@ -300,17 +316,6 @@ window.drawBlindBox = async function() {
         Swal.fire('🎉 開啟成功！', `獲得虛擬配件：<br><b style="font-size:1.2rem; color:#e17055;">${starStr} ${wonItem.name}</b>`, 'success');
     } catch(e) { Swal.fire('錯誤', '連線異常', 'error'); }
 };
-
-    onSnapshot(userRef, (snap) => {
-        if (snap.exists()) {
-            userData = snap.data();
-            updateStudentUI();
-        }
-    });
-
-    renderLevelGrid(); 
-    if(event && event.type === 'click') Swal.fire('登入成功', `歡迎來到皓孩子網，${realName}！✨`, 'success');
-}
 
 window.handleLogout = function() { localStorage.removeItem('hago_logged_in_email'); localStorage.removeItem('hago_logged_in_guest'); signOut(auth).then(() => { location.reload(); }); };
 
