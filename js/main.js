@@ -326,6 +326,7 @@ function updateStudentUI() {
             backpackGrid.innerHTML = backpackHtml;
         }
     }
+    if (window.updateBankUI) window.updateBankUI();
 }
 
 window.claimBackpackItem = async function(itemIndex, itemTitle) {
